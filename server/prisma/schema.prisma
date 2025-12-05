@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+  OTHER
+}
+
+enum RelationshipStatus {
+  SINGLE
+  OPEN
+  COMPLICATED
+  TAKEN
+}
+
+enum SwipeDirection {
+  LEFT
+  RIGHT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  role         UserRole @default(USER)
+  createdAt    DateTime @default(now())
+  lastLoginAt  DateTime?
+  profile      Profile?
+  allowlisted  Boolean  @default(false)
+}
+
+model Profile {
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id])
+  displayName         String
+  gender              Gender
+  age                 Int
+  relationshipStatus  RelationshipStatus
+  bio                 String     @db.VarChar(500)
+  media               Json
+  preferences         Json
+  location            String?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+  swipesInitiated     Swipe[]    @relation("SwipesInitiated")
+  swipesReceived      Swipe[]    @relation("SwipesReceived")
+  matchesAsA          Match[]    @relation("MatchesAsA")
+  matchesAsB          Match[]    @relation("MatchesAsB")
+  messages            Message[]
+  notifications       Notification[]
+}
+
+model Swipe {
+  id               String         @id @default(cuid())
+  sourceProfileId  String
+  targetProfileId  String
+  direction        SwipeDirection
+  deckSeed         String?
+  position         Int?
+  createdAt        DateTime       @default(now())
+  sourceProfile    Profile        @relation("SwipesInitiated", fields: [sourceProfileId], references: [id])
+  targetProfile    Profile        @relation("SwipesReceived", fields: [targetProfileId], references: [id])
+
+  @@unique([sourceProfileId, targetProfileId])
+}
+
+model Match {
+  id               String   @id @default(cuid())
+  profileAId       String
+  profileBId       String
+  createdAt        DateTime @default(now())
+  lastInteractionAt DateTime @default(now())
+  channelId        String?
+  profileA         Profile  @relation("MatchesAsA", fields: [profileAId], references: [id])
+  profileB         Profile  @relation("MatchesAsB", fields: [profileBId], references: [id])
+  messages         Message[]
+
+  @@unique([profileAId, profileBId])
+}
+
+model Message {
+  id               String   @id @default(cuid())
+  matchId          String
+  senderProfileId  String
+  text             String
+  attachments      Json?
+  sentAt           DateTime  @default(now())
+  readAt           DateTime?
+  match            Match     @relation(fields: [matchId], references: [id])
+  senderProfile    Profile   @relation(fields: [senderProfileId], references: [id])
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  profileId  String
+  type       String
+  payload    Json
+  readAt     DateTime?
+  createdAt  DateTime @default(now())
+  profile    Profile  @relation(fields: [profileId], references: [id])
+}
