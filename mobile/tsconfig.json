@@ -9,8 +9,8 @@
       "@/navigation/*": ["src/navigation/*"],
       "@/screens/*": ["src/screens/*"],
       "@/constants/*": ["src/constants/*"],
-      "@/types/*": ["src/types/*"],
-      "@/theme/*": ["src/theme/*"]
+      "@/providers/*": ["src/providers/*"],
+      "@/lib/*": ["src/lib/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "App.tsx"],

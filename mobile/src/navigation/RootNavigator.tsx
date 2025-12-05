@@ -3,15 +3,17 @@ import { ProfileScreen } from '@/screens/ProfileScreen';
 import { SwipeScreen } from '@/screens/SwipeScreen';
 import { MatchesScreen } from '@/screens/MatchesScreen';
 import { AdminScreen } from '@/screens/AdminScreen';
+import { useAuth } from '@/providers/AuthProvider';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 const Tab = createBottomTabNavigator();
 
-const enableAdminTab = process.env.EXPO_PUBLIC_ENABLE_ADMIN === 'true';
-
 export function RootNavigator() {
+  const { user } = useAuth();
+  const enableAdminTab = user?.role === 'admin' && user.allowlisted;
+
   return (
     <NavigationContainer>
       <Tab.Navigator

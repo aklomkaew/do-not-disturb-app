@@ -9,6 +9,7 @@ Located in `server/` and built with **Express + TypeScript + Prisma**.
 
 ### Quick start
 1. Copy `.env.example` to `.env` and set `DATABASE_URL`.
+   - Add `JWT_SECRET` (at least 16 chars) for signing auth tokens.
 2. Install dependencies (already checked in, but run once if needed):
    ```bash
    cd server && npm install
@@ -68,3 +69,21 @@ mobile/
 ```
 
 Next steps (Phases 2-6) will add the mobile clients, OAuth, full feature logic, admin dashboard, and realtime/storage integrations on top of this scaffold.
+
+## Auth (Phase 3 foundation)
+
+- Backend now issues stateless JWT access + refresh tokens from `/api/auth/login`, `/api/auth/refresh`, `/api/auth/logout`.
+- Mobile client includes an `AuthProvider` using SecureStore for token persistence and a `LoginScreen` that simulates Google/Instagram sign-in via email until OAuth is wired.
+- Firebase SDK is initialized in `mobile/src/lib/firebase.ts`; set these env vars for real providers:
+  ```
+  EXPO_PUBLIC_FIREBASE_API_KEY=<...>
+  EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=<...>
+  EXPO_PUBLIC_FIREBASE_PROJECT_ID=<...>
+  EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=<...>
+  EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=<...>
+  EXPO_PUBLIC_FIREBASE_APP_ID=<...>
+  ```
+- To test locally:
+  1. Start the backend (`cd server && npm run dev`).
+  2. In another terminal: `cd mobile && EXPO_PUBLIC_API_BASE_URL=http://localhost:4000 npm start`.
+  3. Use the login screen to enter an email + role (`aklomkaew@gmail.com` will unlock admin tab).
