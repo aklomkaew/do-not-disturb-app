@@ -1,11 +1,12 @@
 import { Router } from 'express';
+import { createSwipe, undoSwipe } from '../controllers/swipeController';
 
 export const swipeRouter = Router();
 
-swipeRouter.post('/', (_req, res) => {
-  res.status(501).json({ message: 'Swipe endpoint not implemented yet' });
+swipeRouter.post('/', (req, res, next) => {
+  createSwipe(req, res).catch(next);
 });
 
-swipeRouter.delete('/:swipeId', (_req, res) => {
-  res.status(501).json({ message: 'Swipe undo not implemented yet' });
+swipeRouter.delete('/:swipeId', (req, res, next) => {
+  undoSwipe(req, res).catch(next);
 });

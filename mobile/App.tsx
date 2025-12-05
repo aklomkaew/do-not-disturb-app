@@ -1,6 +1,7 @@
 import { RootNavigator } from '@/navigation/RootNavigator';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { LoginScreen } from '@/screens/LoginScreen';
+import { ProfileSetupScreen } from '@/screens/ProfileSetupScreen';
 import { useFonts } from 'expo-font';
 import { ActivityIndicator, View } from 'react-native';
 
@@ -23,7 +24,7 @@ export default function App() {
 }
 
 function AppContent() {
-  const { user, isLoading } = useAuth();
+  const { user, profileStatus, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -35,6 +36,10 @@ function AppContent() {
 
   if (!user) {
     return <LoginScreen />;
+  }
+
+  if (profileStatus === 'needs_profile') {
+    return <ProfileSetupScreen />;
   }
 
   return <RootNavigator />;

@@ -30,6 +30,7 @@ interface AuthContextValue {
   isLoading: boolean;
   loginWithEmail: (email: string, role: AuthRole) => Promise<void>;
   logout: () => Promise<void>;
+  setProfileStatus: (status: 'needs_profile' | 'complete') => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -37,7 +38,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<SessionState | null>(null);
-  const [profileStatus, setProfileStatus] = useState<'needs_profile' | 'complete' | null>(null);
+  const [profileStatus, setProfileStatusState] = useState<'needs_profile' | 'complete' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -104,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setUser(userProfile);
       setSession(sessionData);
-      setProfileStatus(data.profileStatus);
+          setProfileStatusState(data.profileStatus);
     } finally {
       setIsLoading(false);
     }
@@ -119,14 +120,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signOut(firebaseAuth);
       setUser(null);
       setSession(null);
-      setProfileStatus(null);
+      setProfileStatusState(null);
     } finally {
       setIsLoading(false);
     }
   }
 
   const value = useMemo(
-    () => ({ user, session, profileStatus, isLoading, loginWithEmail, logout }),
+    () => ({
+      user,
+      session,
+      profileStatus,
+      isLoading,
+      loginWithEmail,
+      logout,
+      setProfileStatus: (status: 'needs_profile' | 'complete') => setProfileStatusState(status),
+    }),
     [user, session, profileStatus, isLoading]
   );
 

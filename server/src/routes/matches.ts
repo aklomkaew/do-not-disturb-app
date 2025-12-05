@@ -1,23 +1,24 @@
 import { Router } from 'express';
+import { getMatch, inbox, listMatchMessages, listMatches, sendMatchMessage } from '../controllers/matchController';
 
 export const matchesRouter = Router();
 
-matchesRouter.get('/', (_req, res) => {
-  res.status(501).json({ message: 'Match listing not implemented yet' });
+matchesRouter.get('/inbox', (req, res, next) => {
+  inbox(req, res).catch(next);
 });
 
-matchesRouter.get('/:matchId', (_req, res) => {
-  res.status(501).json({ message: 'Match detail not implemented yet' });
+matchesRouter.get('/', (req, res, next) => {
+  listMatches(req, res).catch(next);
 });
 
-matchesRouter.get('/:matchId/messages', (_req, res) => {
-  res.status(501).json({ message: 'Match messages not implemented yet' });
+matchesRouter.get('/:matchId', (req, res, next) => {
+  getMatch(req, res).catch(next);
 });
 
-matchesRouter.post('/:matchId/messages', (_req, res) => {
-  res.status(501).json({ message: 'Send message not implemented yet' });
+matchesRouter.get('/:matchId/messages', (req, res, next) => {
+  listMatchMessages(req, res).catch(next);
 });
 
-matchesRouter.get('/inbox', (_req, res) => {
-  res.status(501).json({ message: 'Messages inbox not implemented yet' });
+matchesRouter.post('/:matchId/messages', (req, res, next) => {
+  sendMatchMessage(req, res).catch(next);
 });
