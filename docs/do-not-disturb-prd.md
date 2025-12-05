@@ -59,7 +59,7 @@ Do Not Disturb (DND) is a swipe-based dating application where users authenticat
 - Accessible via bottom navigation bar (`Swipe`, `Matches`, `Profile`).
 - Segments: `Mutual` (two-way), `Liked You` (incoming likes awaiting response), `You Liked` (outbound likes).
 - Cards show avatar, snippet of bio, last activity, and quick CTA to message or keep browsing.
-- Messaging MVP: text + emoji; push notification respecting DND schedules.
+- Messaging CTA now routes into a dedicated `Messages` tab so conversations are always one tap away from the bottom navigation.
 
 ### 6.6 Do Not Disturb Mode (Differentiator)
 - Users set quiet hours (per weekday/weekend) and choose visibility: `visible`, `ghost` (cannot be shown but can complete onboarding), `auto-reply` (sends courtesy note to new matches).
@@ -76,9 +76,16 @@ Do Not Disturb (DND) is a swipe-based dating application where users authenticat
 - Encouragement tips ("Complete your profile" or "Three people liked you") limited to 1/day.
 - Optional prompt to sync calendar for smarter DND scheduling (stretch goal).
 
+### 6.9 Messaging & Conversations
+- Mutual matches unlock threaded messaging (text + emoji, attachments backlog).
+- Dedicated `Messages` tab in bottom navigation with inbox-style list, unread badges, and quick filters (All, Unread, Favorites).
+- Message composer includes typing indicator, read receipts, and respect for DND settings (sends \"user muted\" banner when appropriate).
+- Conversation detail shows profile peek panel with ability to jump back to Swipe or Matches.
+
 ## 7. Information Architecture
-- **Bottom Nav Tabs**: `Swipe`, `Matches`, `Profile`, (conditional `Admin`).
+- **Bottom Nav Tabs**: `Swipe`, `Matches`, `Messages`, `Profile`, plus conditional `Admin`.
 - **Swipe Stack**: Feed screen with profile cards, bottom CTA row, status toasts.
+- **Messages Tab**: Inbox list → conversation detail views → attachments tray.
 - **Profile Tab**: Edit form, DND schedule, account settings, logout.
 - **Admin Tab** (role-gated): Table view of profiles + filters.
 
@@ -90,7 +97,7 @@ Do Not Disturb (DND) is a swipe-based dating application where users authenticat
 2. **Browsing & Matching**
    1. Swipe through cards; likes stored immediately.
    2. On mutual like, toast + push; tap to enter Matches tab.
-   3. Matches tab shows conversation starter suggestions.
+   3. From Matches tab, user taps \"Message\" to open the Messages tab and continue the conversation thread.
 3. **Admin Review**
    1. Admin login → Admin tab.
    2. Filter to "Needs photo verification" → approve or suspend.

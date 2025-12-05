@@ -162,6 +162,8 @@ Content-Type: application/json
 }
 ```
 
+Only mutual matches may call this endpoint; attempts from non-matched profiles return `403`. Messages automatically surface inside the dedicated `Messages` tab so users can jump directly from the bottom navigation bar into any ongoing conversation.
+
 ---
 
 ## 6. Notification & Realtime APIs
@@ -194,6 +196,7 @@ Admins must pass `X-Admin-Role: superuser` header or belong to `admin` role in t
 | `useSwipeActions()` | Wraps `/api/swipes`. | `{ swipeRight(targetId), swipeLeft(targetId), undoLastSwipe() }` |
 | `useMatches()` | Fetch matches and subscribe to realtime updates. | `{ matches, fetchMore(), sendMessage(matchId, payload) }` |
 | `useRealtimeChannel(channel)` | Lightweight wrapper for the WebSocket client with auto-reconnect. |
+| `useMessages()` | Dedicated messaging data source backing the Messages tab. | `{ threads, openThread(matchId), sendMessage(matchId, payload), unreadCount }` |
 
 ### Example: consuming `useSwipeActions`
 ```tsx
@@ -246,6 +249,9 @@ Bottom-tab screen showing `Liked`, `Mutual`, and `Conversations` segments. Consu
 
 ### 9.5 `BottomNavBar`
 Configuration-driven component defining the 3 default tabs: `Swipe`, `Matches`, `Profile`. Accepts an optional `Admin` tab for elevated users.
+
+### 9.6 `MessagesTab`
+Standalone conversations surface reachable directly via bottom navigation (`Swipe`, `Matches`, `Messages`, `Profile`, plus optional `Admin`). Displays list of mutual matches with unread indicators, opens threaded chat powered by `useMessages()`, and exposes quick actions (mute conversation, jump to profile).
 
 Each component is exported from `@dnd/ui` and is tree-shakeable.
 
