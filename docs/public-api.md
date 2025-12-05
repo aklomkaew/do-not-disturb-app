@@ -187,10 +187,38 @@ Inbox-style endpoint powering the `Messages` tab. Returns the latest message per
 | Endpoint | Verb | Description |
 | --- | --- | --- |
 | `/api/admin/profiles` | GET | Query profiles with filters: `flagged`, `createdAt`, `hasMedia`, `role` |
+| `/api/admin/profiles/{id}` | DELETE | Force removes a user profile plus its swipe history (soft-delete with 30-day retention) |
 | `/api/admin/profiles/{id}/moderate` | POST | Takes action (`suspend`, `approve`, `request_changes`) |
 | `/api/admin/metrics/dau` | GET | Returns daily active numbers, likes per day, match rate |
+| `/api/admin/stats` | GET | Aggregated stats: total users, gender split, relationship status counts, likes sent per day, matches per profile |
 
-Admins must pass `X-Admin-Role: superuser` header or belong to `admin` role in the JWT claims.
+Admins must pass `X-Admin-Role: superuser` header or belong to `admin` role in the JWT claims. Additionally, backend enforces an allowlisted email roster; the initial list contains `aklomkaew@gmail.com` and will expand via secure config. All admin endpoints reject requests from accounts not in the allowlist even if they possess the `admin` role.
+
+### 7.1 `GET /api/admin/stats` Response Example
+```json
+{
+  "totals": {
+    "users": 12500,
+    "male": 6100,
+    "female": 5800,
+    "nonBinary": 600
+  },
+  "relationshipStatus": {
+    "single": 9000,
+    "open": 2000,
+    "complicated": 1500
+  },
+  "likesSent": {
+    "total": 220000,
+    "perProfileMedian": 18
+  },
+  "matchesPerProfile": {
+    "average": 4.2,
+    "p95": 15
+  }
+}
+```
+Stats are eventually consistent (5-minute lag) and sourced from the analytics warehouse.
 
 ---
 
@@ -288,6 +316,8 @@ Each component is exported from `@dnd/ui` and is tree-shakeable.
    - Admin logs in with role `admin`.
    - Use `/api/admin/profiles` with filters to inspect flagged accounts.
    - Call `/api/admin/profiles/{id}/moderate` to suspend or request edits.
+   - Pull `/api/admin/stats` for top-line numbers before weekly reporting.
+   - Use `DELETE /api/admin/profiles/{id}` when Trust & Safety requires full removal.
 
 ---
 

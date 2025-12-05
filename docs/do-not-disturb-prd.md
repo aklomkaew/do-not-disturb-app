@@ -69,7 +69,10 @@ Do Not Disturb (DND) is a swipe-based dating application where users authenticat
 ### 6.7 Admin Console
 - Web-only internal view listing new profiles, flagged content, abuse reports.
 - Bulk actions (approve/suspend) and audit trail per profile.
-- Role-based access enforced via `admin` login option.
+- Role-based access enforced via `admin` login option plus email allowlist (initially `aklomkaew@gmail.com`; future admins appended through secure config).
+- Dashboard tiles show: total users, gender split, relationship status counts, likes sent, matches per profile, and daily active delta.
+- Admins can permanently remove user profiles (soft delete with 30-day restore window) including associated swipes/matches when mandated by Trust & Safety.
+- Quick export of stats for weekly reporting.
 
 ### 6.8 Notifications & Suggestions
 - Push notifications for matches, new likes, and admin actions respecting DND settings.
@@ -87,7 +90,7 @@ Do Not Disturb (DND) is a swipe-based dating application where users authenticat
 - **Swipe Stack**: Feed screen with profile cards, bottom CTA row, status toasts.
 - **Messages Tab**: Inbox list → conversation detail views → attachments tray.
 - **Profile Tab**: Edit form, DND schedule, account settings, logout.
-- **Admin Tab** (role-gated): Table view of profiles + filters.
+- **Admin Tab** (role-gated + allowlisted): Table view of profiles, stats dashboard cards, and profile removal workflows.
 
 ## 8. User Flows (Happy Paths)
 1. **Onboarding**
@@ -101,6 +104,8 @@ Do Not Disturb (DND) is a swipe-based dating application where users authenticat
 3. **Admin Review**
    1. Admin login → Admin tab.
    2. Filter to "Needs photo verification" → approve or suspend.
+   3. Review dashboard stats (total users, gender split, likes, matches) to prep weekly report.
+   4. If policy violation confirmed, remove profile via DELETE workflow; otherwise return to monitoring queue.
 
 ## 9. Technical Constraints
 - Single backend (Node/TypeScript) exposing REST + WebSocket per API doc.
