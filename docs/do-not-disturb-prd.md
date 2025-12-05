@@ -5,7 +5,7 @@
 | 0.1 | 2025-12-04 | GPT-5.1 Codex (PM) | CEO, Eng Lead, Design Lead, Data, Trust & Safety |
 
 ## 1. Executive Summary
-Do Not Disturb (DND) is a swipe-based dating application where users authenticate with Google or Instagram, build expressive profiles, browse other members, and form matches when likes are mutual. The differentiator is intentional quiet time: users can control when and how they are discoverable to reduce notification fatigue while still using familiar dating patterns.
+Do Not Disturb (DND) is a swipe-based dating application where users authenticate with Google or Instagram, build expressive profiles, browse other members, and form matches when likes are mutual. The differentiator is intentional quiet time: users can control when and how they are discoverable to reduce notification fatigue while still using familiar dating patterns, while matched users transition into a dedicated Messages tab to chat without digging through swipe feeds.
 
 ## 2. Objectives & Success Metrics
 - **O1** – Launch Android/iOS MVP with <30s onboarding time for 90% of new users.

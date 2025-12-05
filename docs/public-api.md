@@ -15,6 +15,7 @@ This document enumerates the public APIs, service functions, and UI components t
 | `Profile` | Dating persona tied 1:1 with a `User`. | `id`, `userId`, `displayName`, `gender`, `age`, `relationshipStatus`, `bio`, `media` (array of URLs), `preferences`, `location` |
 | `Swipe` | One directional intent from a profile. | `id`, `sourceProfileId`, `targetProfileId`, `direction` (`right` \| `left`), `createdAt` |
 | `Match` | Pair of profiles with mutual likes. | `id`, `profileAId`, `profileBId`, `createdAt`, `lastInteractionAt`, `channelId` |
+| `Message` | Conversation artifact between matched profiles. | `id`, `matchId`, `senderProfileId`, `text`, `attachments`, `sentAt`, `readAt` |
 | `Notification` | Delivered when someone likes or matches. | `id`, `profileId`, `type`, `payload`, `readAt` |
 
 All timestamps are ISO 8601 strings in UTC. IDs are ULIDs to guarantee sortable uniqueness.
@@ -139,7 +140,7 @@ Allows undo within 10 minutes (premium feature toggleable via config flag `featu
 
 ---
 
-## 5. Matches APIs
+## 5. Matches & Messaging APIs
 
 ### 5.1 GET `/api/matches`
 Returns matches for the authenticated profile. Supports filtering by `since`, `hasUnread`, and pagination via `cursor`.
@@ -147,7 +148,10 @@ Returns matches for the authenticated profile. Supports filtering by `since`, `h
 ### 5.2 GET `/api/matches/{matchId}`
 Detailed view, including conversation metadata.
 
-### 5.3 POST `/api/matches/{matchId}/messages`
+### 5.3 GET `/api/matches/{matchId}/messages`
+Returns paginated conversation history scoped to a single match. Supports query params `cursor`, `direction=older|newer`, and `limit` (default 50).
+
+### 5.4 POST `/api/matches/{matchId}/messages`
 Creates a text message inside the secure channel. Supports emoji + image attachments (<=5 MB).
 
 Usage example:
@@ -163,6 +167,9 @@ Content-Type: application/json
 ```
 
 Only mutual matches may call this endpoint; attempts from non-matched profiles return `403`. Messages automatically surface inside the dedicated `Messages` tab so users can jump directly from the bottom navigation bar into any ongoing conversation.
+
+### 5.5 GET `/api/messages`
+Inbox-style endpoint powering the `Messages` tab. Returns the latest message per match (thread preview), unread counts, and last activity timestamps so the UI can render conversation lists without fetching each match individually.
 
 ---
 
@@ -248,7 +255,7 @@ Reusable card showing photos + metadata. Accepts `renderBadges` render prop for 
 Bottom-tab screen showing `Liked`, `Mutual`, and `Conversations` segments. Consumes `useMatches()` under the hood.
 
 ### 9.5 `BottomNavBar`
-Configuration-driven component defining the 3 default tabs: `Swipe`, `Matches`, `Profile`. Accepts an optional `Admin` tab for elevated users.
+Configuration-driven component defining the default tabs: `Swipe`, `Matches`, `Messages`, `Profile`. Accepts an optional `Admin` tab for elevated users and supports market-specific reordering flags.
 
 ### 9.6 `MessagesTab`
 Standalone conversations surface reachable directly via bottom navigation (`Swipe`, `Matches`, `Messages`, `Profile`, plus optional `Admin`). Displays list of mutual matches with unread indicators, opens threaded chat powered by `useMessages()`, and exposes quick actions (mute conversation, jump to profile).
@@ -275,7 +282,7 @@ Each component is exported from `@dnd/ui` and is tree-shakeable.
 2. **Swiping loop**
    - Prefetch `GET /api/profiles?limit=20`.
    - Feed list into `SwipeDeck` and relay gestures to `/api/swipes`.
-   - On match, navigate to `MatchesTab` and auto-open conversation detail.
+   - On match, navigate to `MatchesTab`, then allow the user to tap into the `MessagesTab` for the dedicated chat thread.
 
 3. **Admin review**
    - Admin logs in with role `admin`.
