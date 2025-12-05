@@ -43,4 +43,28 @@ server/
     config/env.ts        # Dotenv + Zod validation
 ```
 
+## Mobile (Phase 2 scaffold)
+Created with **Expo + React Native + React Navigation** under `mobile/`. The current build focuses on wiring the core navigation tabs (Swipe, Matches, Messages, Profile, Admin) and pinging the backend `/health` endpoint so we can validate connectivity before adding auth or data flows.
+
+### Quick start
+```bash
+cd mobile
+npm install          # already run, but safe if dependencies change
+EXPO_PUBLIC_API_BASE_URL=http://localhost:4000 npm run start
+```
+- Set `EXPO_PUBLIC_ENABLE_ADMIN=true` to reveal the admin tab (defaults to hidden).
+- The mobile app currently displays placeholder copy on each tab plus an API health banner on the Swipe screen.
+- Use the Expo Go app or simulator via `npm run ios` / `npm run android`.
+
+### Mobile structure
+```
+mobile/
+  App.tsx                    # bootstraps fonts + RootNavigator
+  src/navigation/RootNavigator.tsx
+  src/screens/*              # Placeholder Swipe/Matches/Messages/Profile/Admin views
+  src/hooks/useHealthCheck.ts
+  src/components/ScreenContainer.tsx, StatusBanner.tsx
+  src/constants/config.ts    # Reads EXPO_PUBLIC_API_BASE_URL
+```
+
 Next steps (Phases 2-6) will add the mobile clients, OAuth, full feature logic, admin dashboard, and realtime/storage integrations on top of this scaffold.

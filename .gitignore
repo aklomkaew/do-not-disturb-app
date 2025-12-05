@@ -4,3 +4,7 @@ node_modules
 server/node_modules
 server/dist
 server/.env
+mobile/node_modules
+mobile/.expo
+mobile/.expo-shared
+mobile/.env
