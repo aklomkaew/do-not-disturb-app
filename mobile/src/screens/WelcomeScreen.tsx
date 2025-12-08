@@ -3,16 +3,18 @@ import { StatusBanner } from '@/components/StatusBanner';
 import { API_BASE_URL } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
+import type { AuthStackParamList } from '@/navigation/AuthenticatedNavigator';
 import { useNavigation } from '@react-navigation/native';
-import { useEffect, useMemo, useState } from 'react';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export function WelcomeScreen() {
   const { user } = useAuth();
   const { status, timestamp } = useHealthCheck();
-  const [profileStatus, setProfileStatus] = useState<'idle' | 'creating' | 'ready' | 'error'>('idle');
+  const [profileState, setProfileState] = useState<'checking' | 'missing' | 'exists' | 'error'>('checking');
   const [error, setError] = useState<string | null>(null);
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
 
   const displayNameFallback = useMemo(() => {
     if (user?.email) {
@@ -24,46 +26,72 @@ export function WelcomeScreen() {
     return `User ${user?.id.slice(0, 6)}`;
   }, [user]);
 
-  useEffect(() => {
+  const checkProfile = useCallback(() => {
     if (!user) return;
 
     let cancelled = false;
+    setProfileState('checking');
+    setError(null);
     const userId = user.id;
 
-    async function ensureProfile() {
+    (async () => {
       try {
-        setProfileStatus('creating');
-        setError(null);
+        const response = await fetch(`${API_BASE_URL}/api/profile/${userId}`);
 
-        const response = await fetch(`${API_BASE_URL}/api/profile/bootstrap`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            displayName: displayNameFallback,
-          }),
-        });
+        if (response.status === 404) {
+          if (!cancelled) setProfileState('missing');
+          return;
+        }
 
         if (!response.ok) {
           throw new Error(await extractError(response));
         }
 
-        if (!cancelled) {
-          setProfileStatus('ready');
-        }
+        if (!cancelled) setProfileState('exists');
       } catch (err) {
         if (!cancelled) {
-          setProfileStatus('error');
-          setError(err instanceof Error ? err.message : 'Failed to create profile');
+          setProfileState('error');
+          setError(err instanceof Error ? err.message : 'Failed to check profile status');
         }
       }
-    }
+    })();
 
-    ensureProfile();
     return () => {
       cancelled = true;
     };
-  }, [displayNameFallback, user]);
+  }, [user]);
+
+  useEffect(() => {
+    const cancel = checkProfile();
+    return () => {
+      if (typeof cancel === 'function') {
+        cancel();
+      }
+    };
+  }, [checkProfile]);
+
+  const handleContinue = () => {
+    if (!user) return;
+
+    if (profileState === 'missing') {
+      navigation.navigate('CreateProfile', {
+        userId: user.id,
+        initialDisplayName: displayNameFallback,
+      });
+    } else if (profileState === 'exists') {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'MainTabs' }],
+      });
+    }
+  };
+
+  const ctaLabel =
+    profileState === 'missing'
+      ? 'Create your account'
+      : profileState === 'exists'
+      ? 'Start exploring'
+      : 'Checking...';
 
   return (
     <ScreenContainer>
@@ -78,7 +106,7 @@ export function WelcomeScreen() {
         </Text>
       </View>
 
-      <ProfileStatusBadge status={profileStatus} error={error} />
+      <ProfileStatusBadge state={profileState} error={error} onRetry={checkProfile} />
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Account snapshot</Text>
@@ -95,15 +123,11 @@ export function WelcomeScreen() {
       </View>
 
       <Pressable
-        style={[styles.cta, profileStatus !== 'ready' && styles.ctaDisabled]}
-        disabled={profileStatus !== 'ready'}
-        onPress={() => navigation.navigate('Swipe' as never)}
+        style={[styles.cta, (profileState === 'checking' || profileState === 'error') && styles.ctaDisabled]}
+        disabled={profileState === 'checking' || profileState === 'error'}
+        onPress={handleContinue}
       >
-        {profileStatus === 'creating' ? (
-          <ActivityIndicator color="#0B0B0D" />
-        ) : (
-          <Text style={styles.ctaLabel}>Start exploring</Text>
-        )}
+        {profileState === 'checking' ? <ActivityIndicator color="#0B0B0D" /> : <Text style={styles.ctaLabel}>{ctaLabel}</Text>}
       </Pressable>
     </ScreenContainer>
   );
@@ -127,21 +151,36 @@ function Callout({ title, body }: { title: string; body: string }) {
   );
 }
 
-function ProfileStatusBadge({ status, error }: { status: 'idle' | 'creating' | 'ready' | 'error'; error: string | null }) {
-  let label = 'Preparing profile...';
+function ProfileStatusBadge({
+  state,
+  error,
+  onRetry,
+}: {
+  state: 'checking' | 'missing' | 'exists' | 'error';
+  error: string | null;
+  onRetry: () => void;
+}) {
+  let label = 'Checking profile status...';
   let badgeColor = '#FBBF24';
 
-  if (status === 'ready') {
+  if (state === 'missing') {
+    label = 'No profile found. Create one to continue.';
+  } else if (state === 'exists') {
     label = 'Profile ready';
     badgeColor = '#34D399';
-  } else if (status === 'error') {
-    label = error ?? 'Profile setup failed';
+  } else if (state === 'error') {
+    label = error ?? 'Profile lookup failed';
     badgeColor = '#F87171';
   }
 
   return (
     <View style={[styles.statusBadge, { borderColor: badgeColor }]}>
       <Text style={[styles.statusLabel, { color: badgeColor }]}>{label}</Text>
+      {state === 'error' ? (
+        <Pressable onPress={onRetry}>
+          <Text style={styles.retryLabel}>Try again</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -240,8 +279,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 16,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
   },
   statusLabel: {
+    fontWeight: '600',
+    flex: 1,
+  },
+  retryLabel: {
+    color: '#93C5FD',
     fontWeight: '600',
   },
 });

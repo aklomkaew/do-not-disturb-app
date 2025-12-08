@@ -1,5 +1,5 @@
+import { AuthenticatedNavigator } from '@/navigation/AuthenticatedNavigator';
 import { LoginScreen } from '@/screens/LoginScreen';
-import { RootNavigator } from '@/navigation/RootNavigator';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { useAuth } from '@/hooks/useAuth';
 import { useFonts } from 'expo-font';
@@ -30,7 +30,7 @@ function AppShell({ fontsLoaded }: { fontsLoaded: boolean }) {
   }
 
   if (status === 'authenticated') {
-    return <RootNavigator />;
+    return <AuthenticatedNavigator />;
   }
 
   return <LoginScreen />;

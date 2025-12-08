@@ -41,8 +41,23 @@ profileRouter.post('/bootstrap', async (req, res, next) => {
   }
 });
 
-profileRouter.get('/me', (_req, res) => {
-  res.status(501).json({ message: 'Profile lookup not implemented yet' });
+const lookupSchema = z.object({
+  userId: z.string().min(8, 'User ID is required'),
+});
+
+profileRouter.get('/:userId', async (req, res, next) => {
+  try {
+    const { userId } = lookupSchema.parse(req.params);
+    const profile = await prisma.profile.findUnique({ where: { userId } });
+
+    if (!profile) {
+      return res.status(404).json({ message: 'Profile not found' });
+    }
+
+    res.json({ profile });
+  } catch (error) {
+    next(error);
+  }
 });
 
 profileRouter.get('/', (_req, res) => {
