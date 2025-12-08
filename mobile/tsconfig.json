@@ -9,6 +9,7 @@
       "@/navigation/*": ["src/navigation/*"],
       "@/screens/*": ["src/screens/*"],
       "@/constants/*": ["src/constants/*"],
+      "@/providers/*": ["src/providers/*"],
       "@/types/*": ["src/types/*"],
       "@/theme/*": ["src/theme/*"]
     }
