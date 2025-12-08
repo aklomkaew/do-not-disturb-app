@@ -5,6 +5,7 @@ import { MatchesScreen } from '@/screens/MatchesScreen';
 import { AdminScreen } from '@/screens/AdminScreen';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { cupidTheme } from '@/constants/theme';
 
 const Tab = createBottomTabNavigator();
 
@@ -17,11 +18,18 @@ export function RootNavigator() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#0F1015',
-          borderTopColor: '#1F2028',
+          backgroundColor: cupidTheme.colors.backgroundSoft,
+          borderTopColor: cupidTheme.colors.borderSubtle,
+          height: 68,
+          paddingBottom: 10,
+          paddingTop: 4,
         },
-        tabBarActiveTintColor: '#F472B6',
-        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+        },
+        tabBarActiveTintColor: cupidTheme.colors.accent,
+        tabBarInactiveTintColor: cupidTheme.colors.textMuted,
         tabBarIcon: ({ color, size }) => {
           const iconName = iconForRoute(route.name);
           return <Ionicons name={iconName} size={size} color={color} />;

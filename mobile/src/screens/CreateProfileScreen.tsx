@@ -8,6 +8,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'CreateProfile'>;
 type Route = RouteProp<AuthStackParamList, 'CreateProfile'>;
@@ -103,7 +104,7 @@ export function CreateProfileScreen() {
             value={displayName}
             onChangeText={setDisplayName}
             placeholder="Alex"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={cupidTheme.colors.textMuted}
             autoCapitalize="words"
             editable={!submitting}
           />
@@ -114,8 +115,8 @@ export function CreateProfileScreen() {
             value={age}
             onChangeText={setAge}
             placeholder="27"
-            placeholderTextColor="#6B7280"
-          keyboardType="number-pad"
+            placeholderTextColor={cupidTheme.colors.textMuted}
+            keyboardType="number-pad"
             editable={!submitting}
           />
 
@@ -131,7 +132,7 @@ export function CreateProfileScreen() {
             value={location}
             onChangeText={setLocation}
             placeholder="City, Country"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={cupidTheme.colors.textMuted}
             editable={!submitting}
           />
 
@@ -140,7 +141,13 @@ export function CreateProfileScreen() {
               <Text style={styles.label}>Match notifications</Text>
               <Text style={styles.copy}>Get notified when someone matches with you.</Text>
             </View>
-            <Switch value={notifyMatches} onValueChange={setNotifyMatches} disabled={submitting} />
+            <Switch
+              value={notifyMatches}
+              onValueChange={setNotifyMatches}
+              disabled={submitting}
+              trackColor={{ false: cupidTheme.colors.borderSubtle, true: cupidTheme.colors.accentSoft }}
+              thumbColor={notifyMatches ? cupidTheme.colors.accent : '#FFFFFF'}
+            />
           </View>
 
           <Text style={styles.label}>Bio</Text>
@@ -149,7 +156,7 @@ export function CreateProfileScreen() {
             value={bio}
             onChangeText={setBio}
             placeholder="Share what makes you tick, your boundaries, or your perfect Do Not Disturb day."
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={cupidTheme.colors.textMuted}
             editable={!submitting}
             multiline
           />
@@ -157,7 +164,7 @@ export function CreateProfileScreen() {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable style={[styles.button, submitting && styles.buttonDisabled]} onPress={handleSubmit} disabled={submitting}>
-            {submitting ? <ActivityIndicator color="#0B0B0D" /> : <Text style={styles.buttonLabel}>Save & continue</Text>}
+            {submitting ? <ActivityIndicator color={cupidTheme.colors.surface} /> : <Text style={styles.buttonLabel}>Save & continue</Text>}
           </Pressable>
         </View>
       </ScrollView>
@@ -197,57 +204,63 @@ function formatLabel(value: string) {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 16,
+    gap: 18,
     paddingBottom: 48,
   },
   hero: {
-    padding: 20,
-    borderRadius: 20,
-    backgroundColor: '#111827',
+    padding: 24,
+    borderRadius: cupidTheme.radii.xl,
+    backgroundColor: cupidTheme.colors.surface,
     gap: 10,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+    ...cardShadow(),
   },
   kicker: {
-    color: '#F472B6',
-    fontWeight: '600',
+    color: cupidTheme.colors.accent,
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   title: {
-    color: '#F9FAFB',
-    fontSize: 24,
-    fontWeight: '700',
+    color: cupidTheme.colors.textPrimary,
+    fontSize: 26,
+    fontWeight: '800',
   },
   copy: {
-    color: '#D1D5DB',
+    color: cupidTheme.colors.textSecondary,
     lineHeight: 20,
   },
   toggleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  card: {
-    padding: 20,
-    borderRadius: 16,
-    backgroundColor: '#1F2028',
     gap: 12,
   },
+  card: {
+    padding: 22,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surface,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+  },
   label: {
-    color: '#E5E7EB',
-    fontWeight: '600',
+    color: cupidTheme.colors.textSecondary,
+    fontWeight: '700',
   },
   input: {
-    backgroundColor: '#0D0F15',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    borderRadius: cupidTheme.radii.lg,
+    paddingHorizontal: 18,
     paddingVertical: 14,
-    color: '#F9FAFB',
+    color: cupidTheme.colors.textPrimary,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#2D303E',
+    borderColor: cupidTheme.colors.border,
   },
   textArea: {
-    minHeight: 120,
+    minHeight: 140,
     textAlignVertical: 'top',
   },
   optionGroup: {
@@ -256,40 +269,43 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   optionButton: {
-    borderRadius: 20,
+    borderRadius: cupidTheme.radii.pill,
     borderWidth: 1,
-    borderColor: '#374151',
-    paddingHorizontal: 12,
+    borderColor: cupidTheme.colors.border,
+    paddingHorizontal: 14,
     paddingVertical: 8,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
   },
   optionButtonActive: {
-    backgroundColor: '#F472B6',
-    borderColor: '#F472B6',
+    backgroundColor: cupidTheme.colors.accentSoft,
+    borderColor: cupidTheme.colors.accent,
   },
   optionLabel: {
-    color: '#D1D5DB',
-    fontWeight: '600',
+    color: cupidTheme.colors.textMuted,
+    fontWeight: '700',
   },
   optionLabelActive: {
-    color: '#0B0B0D',
+    color: cupidTheme.colors.textPrimary,
   },
   error: {
-    color: '#FCA5A5',
+    color: cupidTheme.colors.error,
   },
   button: {
-    backgroundColor: '#F472B6',
-    borderRadius: 12,
+    backgroundColor: cupidTheme.colors.accent,
+    borderRadius: cupidTheme.radii.lg,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 6,
+    ...cardShadow('floating'),
   },
   buttonDisabled: {
-    opacity: 0.6,
+    opacity: 0.7,
   },
   buttonLabel: {
-    color: '#0B0B0D',
-    fontWeight: '700',
+    color: cupidTheme.colors.surface,
+    fontWeight: '800',
     fontSize: 16,
+    letterSpacing: 0.4,
   },
 });
 

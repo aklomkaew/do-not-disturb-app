@@ -2,8 +2,9 @@ import { RootNavigator } from '@/navigation/RootNavigator';
 import { CreateProfileScreen } from '@/screens/CreateProfileScreen';
 import { ProfileEditorScreen } from '@/screens/ProfileEditorScreen';
 import { WelcomeScreen } from '@/screens/WelcomeScreen';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { cupidTheme } from '@/constants/theme';
 
 export type AuthStackParamList = {
   Welcome: undefined;
@@ -24,9 +25,21 @@ export type ProfilePayload = {
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
+const navigationTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: cupidTheme.colors.background,
+    primary: cupidTheme.colors.accent,
+    text: cupidTheme.colors.textPrimary,
+    card: cupidTheme.colors.surface,
+    border: cupidTheme.colors.borderSubtle,
+  },
+};
+
 export function AuthenticatedNavigator() {
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Welcome" component={WelcomeScreen} />
         <Stack.Screen name="CreateProfile" component={CreateProfileScreen} />

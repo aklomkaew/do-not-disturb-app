@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useFonts } from 'expo-font';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { cupidTheme } from '@/constants/theme';
 
 export default function App() {
   const [fontsLoaded] = useFonts({});
@@ -23,8 +24,15 @@ function AppShell({ fontsLoaded }: { fontsLoaded: boolean }) {
 
   if (!fontsLoaded || status === 'loading') {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0B0B0D' }}>
-        <ActivityIndicator color="#F472B6" />
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: cupidTheme.colors.background,
+        }}
+      >
+        <ActivityIndicator color={cupidTheme.colors.accent} />
       </View>
     );
   }

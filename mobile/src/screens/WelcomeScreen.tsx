@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { cupidTheme, cardShadow } from '@/constants/theme';
 
 export function WelcomeScreen() {
   const { user, accessToken } = useAuth();
@@ -133,7 +134,7 @@ export function WelcomeScreen() {
         disabled={profileState === 'checking' || profileState === 'error'}
         onPress={handleContinue}
       >
-        {profileState === 'checking' ? <ActivityIndicator color="#0B0B0D" /> : <Text style={styles.ctaLabel}>{ctaLabel}</Text>}
+        {profileState === 'checking' ? <ActivityIndicator color={cupidTheme.colors.surface} /> : <Text style={styles.ctaLabel}>{ctaLabel}</Text>}
       </Pressable>
     </ScreenContainer>
   );
@@ -167,16 +168,16 @@ function ProfileStatusBadge({
   onRetry: () => void;
 }) {
   let label = 'Checking profile status...';
-  let badgeColor = '#FBBF24';
+  let badgeColor = cupidTheme.colors.warning;
 
   if (state === 'missing') {
     label = 'No profile found. Create one to continue.';
   } else if (state === 'exists') {
     label = 'Profile ready';
-    badgeColor = '#34D399';
+    badgeColor = cupidTheme.colors.success;
   } else if (state === 'error') {
     label = error ?? 'Profile lookup failed';
-    badgeColor = '#F87171';
+    badgeColor = cupidTheme.colors.error;
   }
 
   return (
@@ -193,39 +194,44 @@ function ProfileStatusBadge({
 
 const styles = StyleSheet.create({
   hero: {
-    gap: 4,
-    padding: 20,
-    borderRadius: 20,
-    backgroundColor: '#111827',
+    gap: 8,
+    padding: 26,
+    borderRadius: cupidTheme.radii.xl,
+    backgroundColor: cupidTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+    ...cardShadow(),
   },
   kicker: {
-    color: '#F472B6',
-    fontWeight: '600',
+    color: cupidTheme.colors.accent,
+    fontWeight: '700',
     textTransform: 'uppercase',
     fontSize: 12,
-    letterSpacing: 1,
+    letterSpacing: 1.2,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#F9FAFB',
+    fontSize: 30,
+    fontWeight: '800',
+    color: cupidTheme.colors.textPrimary,
   },
   copy: {
-    marginTop: 8,
-    color: '#D1D5DB',
-    lineHeight: 20,
+    marginTop: 10,
+    color: cupidTheme.colors.textSecondary,
+    lineHeight: 22,
   },
   card: {
-    marginTop: 16,
-    padding: 20,
-    borderRadius: 16,
-    backgroundColor: '#1F2028',
-    gap: 12,
+    marginTop: 18,
+    padding: 22,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surface,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
   },
   cardTitle: {
-    color: '#F3F4F6',
-    fontWeight: '600',
-    fontSize: 16,
+    color: cupidTheme.colors.textPrimary,
+    fontWeight: '700',
+    fontSize: 17,
   },
   meta: {
     gap: 12,
@@ -235,67 +241,73 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   metaLabel: {
-    color: '#9CA3AF',
+    color: cupidTheme.colors.textMuted,
     fontSize: 13,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   metaValue: {
-    color: '#F9FAFB',
-    fontSize: 13,
-    fontWeight: '600',
+    color: cupidTheme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '700',
   },
   callouts: {
-    marginTop: 16,
+    marginTop: 18,
     gap: 12,
   },
   callout: {
-    padding: 16,
-    borderRadius: 14,
-    backgroundColor: '#0D0F15',
+    padding: 18,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
     borderWidth: 1,
-    borderColor: '#1F2937',
+    borderColor: cupidTheme.colors.borderSubtle,
     gap: 6,
   },
   calloutTitle: {
-    color: '#E5E7EB',
-    fontWeight: '600',
+    color: cupidTheme.colors.textPrimary,
+    fontWeight: '700',
     fontSize: 15,
   },
   calloutBody: {
-    color: '#9CA3AF',
+    color: cupidTheme.colors.textSecondary,
     lineHeight: 18,
   },
   cta: {
-    marginTop: 16,
-    backgroundColor: '#F472B6',
+    marginTop: 18,
+    backgroundColor: cupidTheme.colors.accent,
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: cupidTheme.radii.lg,
     alignItems: 'center',
+    ...cardShadow('floating'),
   },
   ctaDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
   ctaLabel: {
-    color: '#0B0B0D',
-    fontWeight: '700',
+    color: cupidTheme.colors.surface,
+    fontWeight: '800',
     fontSize: 16,
+    letterSpacing: 0.5,
   },
   statusBadge: {
-    marginTop: 16,
+    marginTop: 18,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    borderRadius: cupidTheme.radii.lg,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
     flexDirection: 'row',
     gap: 12,
     alignItems: 'center',
+    backgroundColor: cupidTheme.colors.surface,
   },
   statusLabel: {
     fontWeight: '600',
     flex: 1,
+    color: cupidTheme.colors.textPrimary,
   },
   retryLabel: {
-    color: '#93C5FD',
-    fontWeight: '600',
+    color: cupidTheme.colors.accentSecondary,
+    fontWeight: '700',
   },
 });
 

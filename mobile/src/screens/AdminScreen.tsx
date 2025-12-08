@@ -1,5 +1,6 @@
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { StyleSheet, Text, View } from 'react-native';
+import { cupidTheme, cardShadow } from '@/constants/theme';
 
 export function AdminScreen() {
   return (
@@ -17,18 +18,22 @@ export function AdminScreen() {
 
 const styles = StyleSheet.create({
   card: {
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#1F2028',
-    gap: 8,
+    padding: 22,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surface,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+    ...cardShadow(),
   },
   heading: {
-    fontSize: 20,
-    color: '#F9FAFB',
-    fontWeight: '700',
+    fontSize: 22,
+    color: cupidTheme.colors.textPrimary,
+    fontWeight: '800',
   },
   copy: {
-    color: '#D1D5DB',
-    fontSize: 14,
+    color: cupidTheme.colors.textSecondary,
+    fontSize: 15,
+    lineHeight: 20,
   },
 });

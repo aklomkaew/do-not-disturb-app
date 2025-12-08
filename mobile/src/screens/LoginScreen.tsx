@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type Step = 'request' | 'verify';
 
@@ -86,7 +87,7 @@ export function LoginScreen() {
           <TextInput
             style={styles.input}
             placeholder="+1 555 123 4567"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={cupidTheme.colors.textMuted}
             autoCapitalize="none"
             keyboardType="phone-pad"
             value={phoneNumber}
@@ -100,7 +101,7 @@ export function LoginScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="123456"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={cupidTheme.colors.textMuted}
                 keyboardType="number-pad"
                 value={code}
                 onChangeText={setCode}
@@ -119,7 +120,7 @@ export function LoginScreen() {
           ) : null}
 
           <Pressable style={[styles.button, !canSubmit() && styles.buttonDisabled]} onPress={handleSubmit} disabled={!canSubmit()}>
-            {submitting ? <ActivityIndicator color="#0B0B0D" /> : <Text style={styles.buttonLabel}>{ctaLabel}</Text>}
+            {submitting ? <ActivityIndicator color={cupidTheme.colors.surface} /> : <Text style={styles.buttonLabel}>{ctaLabel}</Text>}
           </Pressable>
 
           {step === 'verify' ? (
@@ -135,76 +136,85 @@ export function LoginScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    gap: 8,
+    gap: 10,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#F9FAFB',
+    fontSize: 30,
+    fontWeight: '800',
+    color: cupidTheme.colors.textPrimary,
   },
   subtitle: {
-    color: '#D1D5DB',
+    color: cupidTheme.colors.textSecondary,
     fontSize: 16,
-    lineHeight: 22,
+    lineHeight: 23,
   },
   card: {
-    marginTop: 16,
-    padding: 20,
-    borderRadius: 16,
-    backgroundColor: '#1F2028',
-    gap: 12,
+    marginTop: 18,
+    padding: 22,
+    borderRadius: cupidTheme.radii.xl,
+    backgroundColor: cupidTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+    gap: 14,
+    ...cardShadow(),
   },
   label: {
-    color: '#E5E7EB',
+    color: cupidTheme.colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  input: {
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    borderRadius: cupidTheme.radii.lg,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    color: cupidTheme.colors.textPrimary,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.border,
+  },
+  error: {
+    color: cupidTheme.colors.error,
     fontSize: 14,
     fontWeight: '600',
   },
-  input: {
-    backgroundColor: '#0D0F15',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#F9FAFB',
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#2D303E',
-  },
-  error: {
-    color: '#FCA5A5',
-    fontSize: 14,
-  },
   message: {
-    color: '#A7F3D0',
+    color: cupidTheme.colors.success,
     fontSize: 14,
+    fontWeight: '600',
   },
   testCode: {
-    color: '#BFDBFE',
+    color: cupidTheme.colors.accentSecondary,
     fontSize: 13,
   },
   testCodeValue: {
     fontWeight: '700',
+    color: cupidTheme.colors.textPrimary,
   },
   button: {
-    marginTop: 4,
-    backgroundColor: '#F472B6',
-    borderRadius: 12,
+    marginTop: 6,
+    backgroundColor: cupidTheme.colors.accent,
+    borderRadius: cupidTheme.radii.lg,
     paddingVertical: 16,
     alignItems: 'center',
+    ...cardShadow('floating'),
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
   buttonLabel: {
-    color: '#0B0B0D',
+    color: cupidTheme.colors.surface,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
   link: {
     alignItems: 'center',
   },
   linkLabel: {
-    color: '#93C5FD',
+    color: cupidTheme.colors.accentSecondary,
     fontSize: 14,
     marginTop: 8,
+    fontWeight: '600',
   },
 });

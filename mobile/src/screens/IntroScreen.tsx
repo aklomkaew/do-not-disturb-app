@@ -2,6 +2,7 @@ import { ScreenContainer } from '@/components/ScreenContainer';
 import { StatusBanner } from '@/components/StatusBanner';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type IntroScreenProps = {
   onGetStarted: () => void;
@@ -37,51 +38,59 @@ export function IntroScreen({ onGetStarted }: IntroScreenProps) {
 const styles = StyleSheet.create({
   hero: {
     marginTop: 8,
-    padding: 20,
-    borderRadius: 20,
-    backgroundColor: '#111827',
+    padding: 24,
+    borderRadius: cupidTheme.radii.xl,
+    backgroundColor: cupidTheme.colors.surface,
     gap: 12,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+    ...cardShadow(),
   },
   kicker: {
-    color: '#F472B6',
+    color: cupidTheme.colors.accent,
     textTransform: 'uppercase',
     letterSpacing: 1,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#F9FAFB',
+    fontSize: 28,
+    fontWeight: '800',
+    color: cupidTheme.colors.textPrimary,
   },
   copy: {
-    color: '#D1D5DB',
-    lineHeight: 20,
+    color: cupidTheme.colors.textSecondary,
+    lineHeight: 22,
   },
   card: {
-    marginTop: 16,
-    padding: 20,
-    borderRadius: 16,
-    backgroundColor: '#1F2028',
-    gap: 6,
+    marginTop: 18,
+    padding: 22,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surface,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
   },
   cardTitle: {
-    color: '#E5E7EB',
-    fontWeight: '600',
-    fontSize: 16,
+    color: cupidTheme.colors.textPrimary,
+    fontWeight: '700',
+    fontSize: 17,
   },
   cardCopy: {
-    color: '#9CA3AF',
+    color: cupidTheme.colors.textMuted,
+    fontSize: 14,
   },
   cta: {
-    marginTop: 20,
-    backgroundColor: '#F472B6',
+    marginTop: 24,
+    backgroundColor: cupidTheme.colors.accent,
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: cupidTheme.radii.lg,
     alignItems: 'center',
+    ...cardShadow('floating'),
   },
   ctaLabel: {
-    color: '#0B0B0D',
+    color: cupidTheme.colors.surface,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
 });

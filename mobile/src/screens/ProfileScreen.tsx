@@ -6,6 +6,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -97,7 +98,7 @@ export function ProfileScreen() {
           <Text style={styles.copy}>You are signed in as {user?.email ?? user?.phoneNumber ?? 'unknown user'}.</Text>
 
           {status === 'loading' ? (
-            <ActivityIndicator color="#F472B6" style={{ marginTop: 16 }} />
+            <ActivityIndicator color={cupidTheme.colors.accent} style={{ marginTop: 16 }} />
           ) : status === 'error' ? (
             <View style={styles.errorState}>
               <Text style={styles.errorText}>{error}</Text>
@@ -157,84 +158,91 @@ function formatLabel(value: string) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 32,
+    paddingBottom: 36,
   },
   card: {
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#1F2028',
-    gap: 12,
+    padding: 22,
+    borderRadius: cupidTheme.radii.xl,
+    backgroundColor: cupidTheme.colors.surface,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+    ...cardShadow(),
   },
   heading: {
-    fontSize: 20,
-    color: '#F9FAFB',
-    fontWeight: '700',
+    fontSize: 24,
+    color: cupidTheme.colors.textPrimary,
+    fontWeight: '800',
   },
   copy: {
-    color: '#D1D5DB',
-    fontSize: 14,
+    color: cupidTheme.colors.textSecondary,
+    fontSize: 15,
   },
   details: {
-    marginTop: 8,
-    gap: 8,
+    marginTop: 10,
+    gap: 10,
   },
   detailRow: {
-    gap: 2,
+    gap: 4,
   },
   meta: {
-    marginTop: 12,
+    marginTop: 16,
     gap: 4,
   },
   metaLabel: {
-    color: '#9CA3AF',
+    color: cupidTheme.colors.textMuted,
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   metaValue: {
-    color: '#F3F4F6',
+    color: cupidTheme.colors.textPrimary,
     fontSize: 14,
+    fontWeight: '700',
   },
   bioBlock: {
-    gap: 4,
-    marginTop: 8,
+    gap: 6,
+    marginTop: 10,
   },
   bio: {
-    color: '#E5E7EB',
+    color: cupidTheme.colors.textSecondary,
     lineHeight: 20,
   },
   actions: {
-    marginTop: 16,
-    gap: 8,
+    marginTop: 18,
+    gap: 10,
   },
   button: {
-    borderRadius: 12,
-    backgroundColor: '#F87171',
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.error,
     paddingVertical: 14,
     alignItems: 'center',
+    ...cardShadow('floating'),
   },
   buttonLabel: {
-    color: '#0B0B0D',
-    fontWeight: '700',
+    color: cupidTheme.colors.surface,
+    fontWeight: '800',
     fontSize: 16,
+    letterSpacing: 0.4,
   },
   secondaryButton: {
-    borderRadius: 12,
+    borderRadius: cupidTheme.radii.lg,
     borderWidth: 1,
-    borderColor: '#F472B6',
+    borderColor: cupidTheme.colors.accent,
     paddingVertical: 12,
     alignItems: 'center',
+    backgroundColor: cupidTheme.colors.surfaceMuted,
   },
   secondaryButtonLabel: {
-    color: '#F472B6',
+    color: cupidTheme.colors.accent,
     fontWeight: '700',
   },
   errorState: {
-    gap: 8,
+    gap: 10,
     marginTop: 12,
   },
   errorText: {
-    color: '#FCA5A5',
+    color: cupidTheme.colors.error,
   },
 });
 

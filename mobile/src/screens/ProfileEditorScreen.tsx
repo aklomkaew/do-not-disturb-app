@@ -6,6 +6,7 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'ProfileEditor'>;
 type Route = RouteProp<AuthStackParamList, 'ProfileEditor'>;
@@ -82,7 +83,7 @@ export function ProfileEditorScreen() {
           value={displayName}
           onChangeText={setDisplayName}
           placeholder="Display name"
-          placeholderTextColor="#6B7280"
+          placeholderTextColor={cupidTheme.colors.textMuted}
         />
 
         <Text style={styles.label}>Age</Text>
@@ -91,7 +92,7 @@ export function ProfileEditorScreen() {
           value={age}
           onChangeText={setAge}
           placeholder="25"
-          placeholderTextColor="#6B7280"
+          placeholderTextColor={cupidTheme.colors.textMuted}
           keyboardType="number-pad"
         />
 
@@ -107,7 +108,7 @@ export function ProfileEditorScreen() {
           value={location}
           onChangeText={setLocation}
           placeholder="City, Country"
-          placeholderTextColor="#6B7280"
+          placeholderTextColor={cupidTheme.colors.textMuted}
         />
 
         <Text style={styles.label}>Bio</Text>
@@ -116,7 +117,7 @@ export function ProfileEditorScreen() {
           value={bio}
           onChangeText={setBio}
           placeholder="Share a little about yourself"
-          placeholderTextColor="#6B7280"
+          placeholderTextColor={cupidTheme.colors.textMuted}
           multiline
           numberOfLines={4}
         />
@@ -126,13 +127,19 @@ export function ProfileEditorScreen() {
             <Text style={styles.label}>Match notifications</Text>
             <Text style={styles.subheading}>Get notified when someone matches with you.</Text>
           </View>
-          <Switch value={notifyMatches} onValueChange={setNotifyMatches} disabled={submitting} />
+          <Switch
+            value={notifyMatches}
+            onValueChange={setNotifyMatches}
+            disabled={submitting}
+            trackColor={{ false: cupidTheme.colors.borderSubtle, true: cupidTheme.colors.accentSoft }}
+            thumbColor={notifyMatches ? cupidTheme.colors.accent : '#FFFFFF'}
+          />
         </View>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <Pressable style={[styles.button, submitting && styles.buttonDisabled]} onPress={handleSave} disabled={submitting}>
-          {submitting ? <ActivityIndicator color="#0B0B0D" /> : <Text style={styles.buttonLabel}>Save changes</Text>}
+          {submitting ? <ActivityIndicator color={cupidTheme.colors.surface} /> : <Text style={styles.buttonLabel}>Save changes</Text>}
         </Pressable>
       </ScrollView>
     </ScreenContainer>
@@ -169,16 +176,16 @@ function formatLabel(value: string) {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 12,
-    paddingBottom: 40,
+    gap: 16,
+    paddingBottom: 44,
   },
   heading: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#F9FAFB',
+    fontSize: 26,
+    fontWeight: '800',
+    color: cupidTheme.colors.textPrimary,
   },
   subheading: {
-    color: '#D1D5DB',
+    color: cupidTheme.colors.textSecondary,
     marginBottom: 8,
   },
   toggleRow: {
@@ -187,20 +194,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   label: {
-    color: '#E5E7EB',
-    fontWeight: '600',
+    color: cupidTheme.colors.textSecondary,
+    fontWeight: '700',
   },
   input: {
-    backgroundColor: '#0D0F15',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    borderRadius: cupidTheme.radii.lg,
+    paddingHorizontal: 18,
     paddingVertical: 14,
-    color: '#F9FAFB',
+    color: cupidTheme.colors.textPrimary,
     borderWidth: 1,
-    borderColor: '#2D303E',
+    borderColor: cupidTheme.colors.border,
   },
   textArea: {
-    minHeight: 120,
+    minHeight: 130,
     textAlignVertical: 'top',
   },
   optionGroup: {
@@ -209,40 +216,43 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   optionButton: {
-    borderRadius: 20,
+    borderRadius: cupidTheme.radii.pill,
     borderWidth: 1,
-    borderColor: '#374151',
-    paddingHorizontal: 12,
+    borderColor: cupidTheme.colors.border,
+    paddingHorizontal: 14,
     paddingVertical: 8,
+    backgroundColor: cupidTheme.colors.surface,
   },
   optionButtonActive: {
-    backgroundColor: '#F472B6',
-    borderColor: '#F472B6',
+    backgroundColor: cupidTheme.colors.accentSoft,
+    borderColor: cupidTheme.colors.accent,
   },
   optionLabel: {
-    color: '#D1D5DB',
-    fontWeight: '600',
+    color: cupidTheme.colors.textMuted,
+    fontWeight: '700',
   },
   optionLabelActive: {
-    color: '#0B0B0D',
+    color: cupidTheme.colors.textPrimary,
   },
   error: {
-    color: '#FCA5A5',
+    color: cupidTheme.colors.error,
   },
   button: {
-    marginTop: 12,
-    backgroundColor: '#F472B6',
-    borderRadius: 12,
+    marginTop: 16,
+    backgroundColor: cupidTheme.colors.accent,
+    borderRadius: cupidTheme.radii.lg,
     paddingVertical: 16,
     alignItems: 'center',
+    ...cardShadow('floating'),
   },
   buttonDisabled: {
-    opacity: 0.6,
+    opacity: 0.7,
   },
   buttonLabel: {
-    color: '#0B0B0D',
-    fontWeight: '700',
+    color: cupidTheme.colors.surface,
+    fontWeight: '800',
     fontSize: 16,
+    letterSpacing: 0.4,
   },
 });
 

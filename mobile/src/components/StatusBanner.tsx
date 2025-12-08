@@ -1,6 +1,7 @@
 import { HealthStatus } from '@/hooks/useHealthCheck';
 import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { cupidTheme } from '@/constants/theme';
 
 interface StatusBannerProps {
   status: HealthStatus;
@@ -8,7 +9,8 @@ interface StatusBannerProps {
 }
 
 export const StatusBanner = memo(function StatusBanner({ status, timestamp }: StatusBannerProps) {
-  const color = status === 'ok' ? '#34D399' : status === 'error' ? '#F87171' : '#FBBF24';
+  const color =
+    status === 'ok' ? cupidTheme.colors.success : status === 'error' ? cupidTheme.colors.error : cupidTheme.colors.warning;
   const label = status === 'ok' ? 'API online' : status === 'error' ? 'API offline' : 'Checking API...';
 
   return (
@@ -24,7 +26,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderRadius: 12,
-    backgroundColor: '#16171D',
+    backgroundColor: cupidTheme.colors.surface,
   },
   label: {
     fontSize: 14,
@@ -32,7 +34,7 @@ const styles = StyleSheet.create({
   },
   meta: {
     marginTop: 4,
-    color: '#9CA3AF',
+    color: cupidTheme.colors.textMuted,
     fontSize: 12,
   },
 });

@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type MatchItem = {
   id: string;
@@ -71,7 +72,7 @@ export function MatchesScreen() {
     return (
       <ScreenContainer>
         <View style={styles.stateCard}>
-          <ActivityIndicator color="#F472B6" />
+          <ActivityIndicator color={cupidTheme.colors.accent} />
         </View>
       </ScreenContainer>
     );
@@ -93,7 +94,7 @@ export function MatchesScreen() {
         data={matches}
         keyExtractor={(item) => item.id}
         contentContainerStyle={matches.length === 0 && styles.emptyContainer}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchMatches(true)} tintColor="#F472B6" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchMatches(true)} tintColor={cupidTheme.colors.accent} />}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <Text style={styles.heading}>
@@ -119,45 +120,50 @@ export function MatchesScreen() {
 
 const styles = StyleSheet.create({
   card: {
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#1F2028',
-    gap: 8,
-    marginBottom: 12,
+    padding: 20,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surface,
+    gap: 10,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+    ...cardShadow(),
   },
   stateCard: {
-    padding: 20,
-    borderRadius: 16,
-    backgroundColor: '#1F2028',
+    padding: 22,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
   },
   emptyContainer: {
     flexGrow: 1,
     justifyContent: 'center',
   },
   heading: {
-    fontSize: 20,
-    color: '#F9FAFB',
-    fontWeight: '700',
+    fontSize: 22,
+    color: cupidTheme.colors.textPrimary,
+    fontWeight: '800',
   },
   location: {
-    color: '#D1D5DB',
+    color: cupidTheme.colors.textSecondary,
   },
   bio: {
-    color: '#E5E7EB',
-    lineHeight: 18,
+    color: cupidTheme.colors.textSecondary,
+    lineHeight: 20,
   },
   copy: {
-    color: '#D1D5DB',
+    color: cupidTheme.colors.textSecondary,
     textAlign: 'center',
   },
   meta: {
-    color: '#9CA3AF',
+    color: cupidTheme.colors.textMuted,
     fontSize: 12,
   },
   errorText: {
-    color: '#FCA5A5',
+    color: cupidTheme.colors.error,
     textAlign: 'center',
   },
 });

@@ -6,6 +6,7 @@ import { useHealthCheck } from '@/hooks/useHealthCheck';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type DeckProfile = {
   id: string;
@@ -120,7 +121,7 @@ export function SwipeScreen() {
       <StatusBanner status={health.status} timestamp={health.timestamp} />
       {loading ? (
         <View style={styles.stateCard}>
-          <ActivityIndicator color="#F472B6" />
+          <ActivityIndicator color={cupidTheme.colors.accent} />
         </View>
       ) : error ? (
         <View style={styles.stateCard}>
@@ -142,7 +143,7 @@ export function SwipeScreen() {
               <Text style={styles.actionLabel}>Pass</Text>
             </Pressable>
             <Pressable style={[styles.actionButton, styles.likeButton]} onPress={() => handleSwipe('RIGHT')} disabled={actionLoading}>
-              <Text style={styles.actionLabel}>Like</Text>
+              <Text style={[styles.actionLabel, styles.actionLabelContrast]}>Like</Text>
             </Pressable>
           </View>
 
@@ -165,81 +166,95 @@ export function SwipeScreen() {
 
 const styles = StyleSheet.create({
   stateCard: {
-    padding: 20,
-    borderRadius: 16,
-    backgroundColor: '#1F2028',
-    gap: 12,
+    padding: 22,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    gap: 14,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
   },
   card: {
-    padding: 20,
-    borderRadius: 16,
-    backgroundColor: '#1F2028',
-    gap: 12,
+    padding: 24,
+    borderRadius: cupidTheme.radii.xl,
+    backgroundColor: cupidTheme.colors.surface,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+    ...cardShadow(),
   },
   heading: {
-    fontSize: 24,
-    color: '#F9FAFB',
-    fontWeight: '700',
+    fontSize: 26,
+    color: cupidTheme.colors.textPrimary,
+    fontWeight: '800',
   },
   location: {
-    color: '#D1D5DB',
+    color: cupidTheme.colors.textSecondary,
   },
   bio: {
-    color: '#E5E7EB',
-    lineHeight: 20,
+    color: cupidTheme.colors.textSecondary,
+    lineHeight: 22,
   },
   copy: {
-    color: '#D1D5DB',
+    color: cupidTheme.colors.textSecondary,
+    textAlign: 'center',
   },
   errorText: {
-    color: '#FCA5A5',
+    color: cupidTheme.colors.error,
     textAlign: 'center',
   },
   actions: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 8,
+    marginTop: 12,
   },
   actionButton: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: cupidTheme.radii.lg,
     alignItems: 'center',
   },
   passButton: {
-    backgroundColor: '#374151',
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.border,
   },
   likeButton: {
-    backgroundColor: '#F472B6',
+    backgroundColor: cupidTheme.colors.accent,
+    ...cardShadow('floating'),
   },
   actionLabel: {
-    color: '#0B0B0D',
-    fontWeight: '700',
+    color: cupidTheme.colors.textPrimary,
+    fontWeight: '800',
+  },
+  actionLabelContrast: {
+    color: cupidTheme.colors.surface,
   },
   rewindButton: {
-    marginTop: 8,
+    marginTop: 12,
     alignItems: 'center',
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: cupidTheme.radii.lg,
     borderWidth: 1,
-    borderColor: '#FBBF24',
+    borderColor: cupidTheme.colors.accentSecondary,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
   },
   rewindLabel: {
-    color: '#FBBF24',
-    fontWeight: '600',
+    color: cupidTheme.colors.accentSecondary,
+    fontWeight: '700',
   },
   secondaryButton: {
-    marginTop: 4,
-    borderRadius: 12,
+    marginTop: 8,
+    borderRadius: cupidTheme.radii.lg,
     borderWidth: 1,
-    borderColor: '#F472B6',
+    borderColor: cupidTheme.colors.accent,
     paddingVertical: 10,
     paddingHorizontal: 24,
+    backgroundColor: cupidTheme.colors.surface,
   },
   secondaryButtonLabel: {
-    color: '#F472B6',
-    fontWeight: '600',
+    color: cupidTheme.colors.accent,
+    fontWeight: '700',
   },
 });
 
