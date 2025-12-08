@@ -82,7 +82,6 @@ export function WelcomeScreen() {
 
     if (profileState === 'missing') {
       navigation.navigate('CreateProfile', {
-        userId: user.id,
         initialDisplayName: displayNameFallback,
       });
     } else if (profileState === 'exists') {

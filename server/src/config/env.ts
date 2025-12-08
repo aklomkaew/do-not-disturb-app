@@ -12,6 +12,15 @@ const envSchema = z.object({
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
   VERIFICATION_CODE_TTL_SECONDS: z.coerce.number().int().positive().default(300),
+  VERIFICATION_REQUEST_LIMIT: z.coerce.number().int().positive().default(5),
+  VERIFICATION_REQUEST_WINDOW_SECONDS: z.coerce.number().int().positive().default(900),
+  SMS_PROVIDER: z.enum(['mock', 'twilio']).default('mock'),
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_FROM_NUMBER: z.string().optional(),
+  EMAIL_PROVIDER: z.enum(['mock', 'resend']).default('mock'),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM_ADDRESS: z.string().email().optional(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

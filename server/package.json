@@ -24,6 +24,8 @@
     "jsonwebtoken": "^9.0.3",
     "libphonenumber-js": "^1.12.31",
     "pg": "^8.16.3",
+    "resend": "^6.5.2",
+    "twilio": "^5.10.7",
     "zod": "^4.1.13"
   },
   "devDependencies": {

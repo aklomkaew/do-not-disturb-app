@@ -7,10 +7,13 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'CreateProfile'>;
 type Route = RouteProp<AuthStackParamList, 'CreateProfile'>;
+
+const genderOptions = ['MALE', 'FEMALE', 'NON_BINARY', 'OTHER'] as const;
+const relationshipOptions = ['SINGLE', 'OPEN', 'COMPLICATED', 'TAKEN'] as const;
 
 export function CreateProfileScreen() {
   const navigation = useNavigation<Navigation>();
@@ -18,12 +21,28 @@ export function CreateProfileScreen() {
   const { status, timestamp } = useHealthCheck();
   const { accessToken } = useAuth();
   const [displayName, setDisplayName] = useState(route.params.initialDisplayName);
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState<typeof genderOptions[number]>('OTHER');
+  const [relationshipStatus, setRelationshipStatus] = useState<typeof relationshipOptions[number]>('SINGLE');
+  const [location, setLocation] = useState('');
+  const [bio, setBio] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     if (displayName.trim().length < 2) {
       setError('Display name must be at least 2 characters');
+      return;
+    }
+
+    const parsedAge = Number(age);
+    if (!Number.isFinite(parsedAge) || parsedAge < 18) {
+      setError('You must be at least 18 to join.');
+      return;
+    }
+
+    if (bio.trim().length < 20) {
+      setError('Tell us a bit more in your bio (20+ characters).');
       return;
     }
 
@@ -42,6 +61,11 @@ export function CreateProfileScreen() {
         },
         body: JSON.stringify({
           displayName: displayName.trim(),
+          age: parsedAge,
+          gender,
+          relationshipStatus,
+          location: location.trim(),
+          bio: bio.trim(),
         }),
       });
 
@@ -62,34 +86,110 @@ export function CreateProfileScreen() {
 
   return (
     <ScreenContainer>
-      <StatusBanner status={status} timestamp={timestamp} />
-      <View style={styles.hero}>
-        <Text style={styles.kicker}>Create your profile</Text>
-        <Text style={styles.title}>We just need a display name to get you started.</Text>
-        <Text style={styles.copy}>You can update it and add detailed preferences once onboarding is complete.</Text>
-      </View>
+      <ScrollView contentContainerStyle={styles.container}>
+        <StatusBanner status={status} timestamp={timestamp} />
+        <View style={styles.hero}>
+          <Text style={styles.kicker}>Create your profile</Text>
+          <Text style={styles.title}>Tell the community who you are.</Text>
+          <Text style={styles.copy}>Thoughtful answers help us match you with people who share your priorities.</Text>
+        </View>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Display name</Text>
-        <TextInput
-          style={styles.input}
-          value={displayName}
-          onChangeText={setDisplayName}
-          placeholder="Alex"
-          placeholderTextColor="#6B7280"
-          autoCapitalize="words"
-          editable={!submitting}
-        />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Pressable style={[styles.button, submitting && styles.buttonDisabled]} onPress={handleSubmit} disabled={submitting}>
-          {submitting ? <ActivityIndicator color="#0B0B0D" /> : <Text style={styles.buttonLabel}>Save & continue</Text>}
-        </Pressable>
-      </View>
+        <View style={styles.card}>
+          <Text style={styles.label}>Display name</Text>
+          <TextInput
+            style={styles.input}
+            value={displayName}
+            onChangeText={setDisplayName}
+            placeholder="Alex"
+            placeholderTextColor="#6B7280"
+            autoCapitalize="words"
+            editable={!submitting}
+          />
+
+          <Text style={styles.label}>Age</Text>
+          <TextInput
+            style={styles.input}
+            value={age}
+            onChangeText={setAge}
+            placeholder="27"
+            placeholderTextColor="#6B7280"
+          keyboardType="number-pad"
+            editable={!submitting}
+          />
+
+          <Text style={styles.label}>Gender</Text>
+          <OptionGroup options={genderOptions} value={gender} onChange={setGender} disabled={submitting} />
+
+          <Text style={styles.label}>Relationship status</Text>
+          <OptionGroup options={relationshipOptions} value={relationshipStatus} onChange={setRelationshipStatus} disabled={submitting} />
+
+          <Text style={styles.label}>Location</Text>
+          <TextInput
+            style={styles.input}
+            value={location}
+            onChangeText={setLocation}
+            placeholder="City, Country"
+            placeholderTextColor="#6B7280"
+            editable={!submitting}
+          />
+
+          <Text style={styles.label}>Bio</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={bio}
+            onChangeText={setBio}
+            placeholder="Share what makes you tick, your boundaries, or your perfect Do Not Disturb day."
+            placeholderTextColor="#6B7280"
+            editable={!submitting}
+            multiline
+          />
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+
+          <Pressable style={[styles.button, submitting && styles.buttonDisabled]} onPress={handleSubmit} disabled={submitting}>
+            {submitting ? <ActivityIndicator color="#0B0B0D" /> : <Text style={styles.buttonLabel}>Save & continue</Text>}
+          </Pressable>
+        </View>
+      </ScrollView>
     </ScreenContainer>
   );
 }
 
+function OptionGroup<T extends string>({
+  options,
+  value,
+  onChange,
+  disabled,
+}: {
+  options: readonly T[];
+  value: string;
+  onChange: (val: T) => void;
+  disabled: boolean;
+}) {
+  return (
+    <View style={styles.optionGroup}>
+      {options.map((option) => (
+        <Pressable
+          key={option}
+          style={[styles.optionButton, value === option && styles.optionButtonActive]}
+          onPress={() => !disabled && onChange(option)}
+        >
+          <Text style={[styles.optionLabel, value === option && styles.optionLabelActive]}>{formatLabel(option)}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+function formatLabel(value: string) {
+  return value.replace('_', ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+}
+
 const styles = StyleSheet.create({
+  container: {
+    gap: 16,
+    paddingBottom: 48,
+  },
   hero: {
     padding: 20,
     borderRadius: 20,
@@ -112,7 +212,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   card: {
-    marginTop: 16,
     padding: 20,
     borderRadius: 16,
     backgroundColor: '#1F2028',
@@ -132,6 +231,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2D303E',
   },
+  textArea: {
+    minHeight: 120,
+    textAlignVertical: 'top',
+  },
+  optionGroup: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionButton: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#374151',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  optionButtonActive: {
+    backgroundColor: '#F472B6',
+    borderColor: '#F472B6',
+  },
+  optionLabel: {
+    color: '#D1D5DB',
+    fontWeight: '600',
+  },
+  optionLabelActive: {
+    color: '#0B0B0D',
+  },
   error: {
     color: '#FCA5A5',
   },
@@ -140,6 +266,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
+    marginTop: 4,
   },
   buttonDisabled: {
     opacity: 0.6,

@@ -6,6 +6,7 @@ import { VerificationChannel } from '@prisma/client';
 import { maskEmail, maskPhoneNumber, normalizePhoneNumber } from '../utils/phone';
 import { createAccessToken, createRefreshToken, verifyRefreshToken } from '../services/token';
 import { env } from '../config/env';
+import { revokeRefreshToken } from '../services/session';
 
 export const authRouter = Router();
 
@@ -34,6 +35,10 @@ const verifyCodeSchema = z.discriminatedUnion('method', [
 ]);
 
 const refreshSchema = z.object({
+  refreshToken: z.string().min(20, 'Refresh token is required'),
+});
+
+const logoutSchema = z.object({
   refreshToken: z.string().min(20, 'Refresh token is required'),
 });
 
@@ -90,7 +95,7 @@ authRouter.post('/verify-code', async (req, res, next) => {
     });
 
     const { token: accessToken, expiresInSeconds: accessTokenExpiresIn } = createAccessToken(updatedUser.id);
-    const { token: refreshToken, expiresInSeconds: refreshTokenExpiresIn } = createRefreshToken(updatedUser.id);
+    const { token: refreshToken, expiresInSeconds: refreshTokenExpiresIn } = await createRefreshToken(updatedUser.id);
 
     res.json({
       user: serializeUser(updatedUser),
@@ -107,7 +112,8 @@ authRouter.post('/verify-code', async (req, res, next) => {
 authRouter.post('/refresh', async (req, res, next) => {
   try {
     const { refreshToken } = refreshSchema.parse(req.body);
-    const userId = verifyRefreshToken(refreshToken);
+    const userId = await verifyRefreshToken(refreshToken);
+    await revokeRefreshToken(refreshToken);
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -115,7 +121,7 @@ authRouter.post('/refresh', async (req, res, next) => {
     }
 
     const { token: accessToken, expiresInSeconds: accessTokenExpiresIn } = createAccessToken(user.id);
-    const { token: nextRefreshToken, expiresInSeconds: refreshTokenExpiresIn } = createRefreshToken(user.id);
+    const { token: nextRefreshToken, expiresInSeconds: refreshTokenExpiresIn } = await createRefreshToken(user.id);
 
     res.json({
       user: serializeUser(user),
@@ -129,8 +135,15 @@ authRouter.post('/refresh', async (req, res, next) => {
   }
 });
 
-authRouter.post('/logout', (_req, res) => {
-  res.json({ message: 'Logged out' });
+authRouter.post('/logout', async (req, res, next) => {
+  try {
+    const { refreshToken } = logoutSchema.parse(req.body);
+    await verifyRefreshToken(refreshToken);
+    await revokeRefreshToken(refreshToken);
+    res.json({ message: 'Logged out' });
+  } catch (error) {
+    next(error);
+  }
 });
 
 function prepareIdentifier(

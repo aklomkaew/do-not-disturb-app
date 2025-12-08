@@ -1,5 +1,6 @@
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import { env } from '../config/env';
+import { ensureActiveRefreshToken, storeRefreshToken } from './session';
 
 const ACCESS_TOKEN_TTL = env.JWT_ACCESS_EXPIRES_IN;
 const REFRESH_TOKEN_TTL = env.JWT_REFRESH_EXPIRES_IN;
@@ -20,11 +21,14 @@ export function createAccessToken(userId: string) {
   };
 }
 
-export function createRefreshToken(userId: string) {
+export async function createRefreshToken(userId: string) {
   const expiresInSeconds = parseDurationSeconds(REFRESH_TOKEN_TTL);
+  const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
   const payload: TokenPayload = { sub: userId };
   const options: SignOptions = { expiresIn: expiresInSeconds };
   const token = jwt.sign(payload, env.JWT_REFRESH_SECRET, options);
+
+  await storeRefreshToken(userId, token, expiresAt);
 
   return {
     token,
@@ -32,12 +36,19 @@ export function createRefreshToken(userId: string) {
   };
 }
 
-export function verifyRefreshToken(token: string) {
+export async function verifyRefreshToken(token: string) {
   try {
     const payload = jwt.verify(token, env.JWT_REFRESH_SECRET) as TokenPayload;
+    const record = await ensureActiveRefreshToken(token);
+
+    if (record.userId !== payload.sub) {
+      throw new Error('Refresh token subject mismatch');
+    }
+
     return payload.sub;
-  } catch {
-    throw Object.assign(new Error('Invalid refresh token'), { status: 401 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Invalid refresh token';
+    throw Object.assign(new Error(message), { status: 401 });
   }
 }
 

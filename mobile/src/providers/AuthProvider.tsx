@@ -154,14 +154,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshWithToken, state.refreshToken]);
 
   const logout = useCallback(async () => {
-    await SecureStore.deleteItemAsync(SESSION_KEY);
-    setState({
-      status: 'unauthenticated',
-      user: null,
-      accessToken: null,
-      refreshToken: null,
-    });
-  }, []);
+    const refreshToken = state.refreshToken;
+
+    try {
+      if (refreshToken) {
+        await fetch(`${API_BASE_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to notify server about logout', error);
+    } finally {
+      await SecureStore.deleteItemAsync(SESSION_KEY);
+      setState({
+        status: 'unauthenticated',
+        user: null,
+        accessToken: null,
+        refreshToken: null,
+      });
+    }
+  }, [state.refreshToken]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
