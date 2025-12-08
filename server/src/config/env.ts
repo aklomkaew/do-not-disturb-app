@@ -7,6 +7,19 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(4000),
   DATABASE_URL: z.string().url(),
+  JWT_SECRET: z.string().min(16, 'JWT secret must be at least 16 characters'),
 });
 
-export const env = envSchema.parse(process.env);
+const parsedEnv = envSchema.safeParse(process.env);
+
+if (!parsedEnv.success) {
+  const details = parsedEnv.error.issues
+    .map((issue) => `${issue.path.join('.') || 'unknown'}: ${issue.message}`)
+    .join('\n');
+
+  throw new Error(
+    `Environment validation failed. Ensure server/.env exists (see server/.env.example).\n${details}`
+  );
+}
+
+export const env = parsedEnv.data;

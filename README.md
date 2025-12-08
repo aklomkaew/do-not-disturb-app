@@ -9,6 +9,7 @@ Located in `server/` and built with **Express + TypeScript + Prisma**.
 
 ### Quick start
 1. Copy `.env.example` to `.env` and set `DATABASE_URL`.
+   - Add `JWT_SECRET` (at least 16 chars) for signing auth tokens.
 2. Install dependencies (already checked in, but run once if needed):
    ```bash
    cd server && npm install
@@ -68,3 +69,38 @@ mobile/
 ```
 
 Next steps (Phases 2-6) will add the mobile clients, OAuth, full feature logic, admin dashboard, and realtime/storage integrations on top of this scaffold.
+
+## Auth (Phase 3 foundation)
+
+- Backend now issues stateless JWT access + refresh tokens from `/api/auth/login`, `/api/auth/refresh`, `/api/auth/logout`.
+- Mobile client includes an `AuthProvider` using SecureStore for token persistence and a `LoginScreen` that simulates Google/Instagram sign-in via email until OAuth is wired.
+- Firebase SDK is initialized in `mobile/src/lib/firebase.ts`; set these env vars for real providers:
+  ```
+  EXPO_PUBLIC_FIREBASE_API_KEY=<...>
+  EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=<...>
+  EXPO_PUBLIC_FIREBASE_PROJECT_ID=<...>
+  EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=<...>
+  EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=<...>
+  EXPO_PUBLIC_FIREBASE_APP_ID=<...>
+  ```
+- To test locally:
+  1. Start the backend (`cd server && npm run dev`).
+  2. In another terminal: `cd mobile && EXPO_PUBLIC_API_BASE_URL=http://localhost:4000 npm start`.
+  3. Use the login screen to enter an email + role (`aklomkaew@gmail.com` will unlock admin tab).
+
+## Swipe/Matches/Messaging (Phase 4)
+
+### Backend
+- `/api/profile` now supports create/update/read + `/api/profiles` deck query with filters.
+- `/api/swipes` records left/right actions, auto-creating matches when both parties like each other, and `/api/swipes/:id` supports undo within 10 minutes.
+- `/api/matches` returns the authenticated user’s matches, `/api/matches/:matchId` for detail, `/api/matches/:matchId/messages` for conversation history + sending messages, and `/api/matches/inbox` exposes thread previews for the Messages tab.
+- All non-auth routes are protected by a JWT `authGuard`.
+
+### Mobile
+- Added `ProfileSetupScreen` presented whenever `profileStatus === 'needs_profile'` so users can fill out the onboarding basics and start swiping immediately.
+- `SwipeScreen` fetches the live deck, shows cards, and wires Pass/Like buttons to `/api/swipes`.
+- `MatchesScreen` lists current matches via `/api/matches`.
+- `MessagesScreen` fetches inbox threads and lets users send quick text replies through `/api/matches/:matchId/messages`.
+- `useApiClient` centralizes authorized fetch calls.
+
+> ⚠️ For quick manual testing, create two accounts (e.g., `user1@example.com`, `user2@example.com`), fill out profiles, and swipe right on each other to see matches/messages flow end-to-end.
