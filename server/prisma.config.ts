@@ -11,9 +11,7 @@ if (!databaseUrl) {
 
 export default defineConfig({
   schema: './prisma/schema.prisma',
-  datasources: {
-    db: {
-      url: databaseUrl,
-    },
+  datasource: {
+    url: databaseUrl,
   },
 });
