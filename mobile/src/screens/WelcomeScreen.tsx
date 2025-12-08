@@ -1,12 +1,67 @@
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { StatusBanner } from '@/components/StatusBanner';
+import { API_BASE_URL } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export function WelcomeScreen() {
   const { user } = useAuth();
   const { status, timestamp } = useHealthCheck();
+  const [profileStatus, setProfileStatus] = useState<'idle' | 'creating' | 'ready' | 'error'>('idle');
+  const [error, setError] = useState<string | null>(null);
+
+  const displayNameFallback = useMemo(() => {
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    if (user?.phoneNumber) {
+      return `User ${user.phoneNumber.slice(-4)}`;
+    }
+    return `User ${user?.id.slice(0, 6)}`;
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let cancelled = false;
+    const userId = user.id;
+
+    async function ensureProfile() {
+      try {
+        setProfileStatus('creating');
+        setError(null);
+
+        const response = await fetch(`${API_BASE_URL}/api/profile/bootstrap`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            displayName: displayNameFallback,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(await extractError(response));
+        }
+
+        if (!cancelled) {
+          setProfileStatus('ready');
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setProfileStatus('error');
+          setError(err instanceof Error ? err.message : 'Failed to create profile');
+        }
+      }
+    }
+
+    ensureProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, [displayNameFallback, user]);
 
   return (
     <ScreenContainer>
@@ -20,6 +75,8 @@ export function WelcomeScreen() {
           or finish setting up your profile.
         </Text>
       </View>
+
+      <ProfileStatusBadge status={profileStatus} error={error} />
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Account snapshot</Text>
@@ -36,7 +93,11 @@ export function WelcomeScreen() {
       </View>
 
       <Pressable style={styles.cta}>
-        <Text style={styles.ctaLabel}>Start exploring</Text>
+        {profileStatus === 'creating' ? (
+          <ActivityIndicator color="#0B0B0D" />
+        ) : (
+          <Text style={styles.ctaLabel}>Start exploring</Text>
+        )}
       </Pressable>
     </ScreenContainer>
   );
@@ -56,6 +117,25 @@ function Callout({ title, body }: { title: string; body: string }) {
     <View style={styles.callout}>
       <Text style={styles.calloutTitle}>{title}</Text>
       <Text style={styles.calloutBody}>{body}</Text>
+    </View>
+  );
+}
+
+function ProfileStatusBadge({ status, error }: { status: 'idle' | 'creating' | 'ready' | 'error'; error: string | null }) {
+  let label = 'Preparing profile...';
+  let badgeColor = '#FBBF24';
+
+  if (status === 'ready') {
+    label = 'Profile ready';
+    badgeColor = '#34D399';
+  } else if (status === 'error') {
+    label = error ?? 'Profile setup failed';
+    badgeColor = '#F87171';
+  }
+
+  return (
+    <View style={[styles.statusBadge, { borderColor: badgeColor }]}>
+      <Text style={[styles.statusLabel, { color: badgeColor }]}>{label}</Text>
     </View>
   );
 }
@@ -145,4 +225,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
   },
+  statusBadge: {
+    marginTop: 16,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  statusLabel: {
+    fontWeight: '600',
+  },
 });
+
+async function extractError(response: Response) {
+  try {
+    const data = await response.json();
+    return data?.message ?? data?.error?.message ?? 'Request failed';
+  } catch {
+    return response.statusText || 'Request failed';
+  }
+}
