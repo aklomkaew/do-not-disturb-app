@@ -3,6 +3,7 @@ import { ProfileScreen } from '@/screens/ProfileScreen';
 import { SwipeScreen } from '@/screens/SwipeScreen';
 import { MatchesScreen } from '@/screens/MatchesScreen';
 import { AdminScreen } from '@/screens/AdminScreen';
+import { WelcomeScreen } from '@/screens/WelcomeScreen';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -29,6 +30,7 @@ export function RootNavigator() {
           },
         })}
       >
+        <Tab.Screen name="Welcome" component={WelcomeScreen} />
         <Tab.Screen name="Swipe" component={SwipeScreen} />
         <Tab.Screen name="Matches" component={MatchesScreen} />
         <Tab.Screen name="Messages" component={MessagesScreen} />
@@ -43,6 +45,8 @@ function iconForRoute(routeName: string): keyof typeof Ionicons.glyphMap {
   switch (routeName) {
     case 'Swipe':
       return 'flame-outline';
+    case 'Welcome':
+      return 'home-outline';
     case 'Matches':
       return 'heart-outline';
     case 'Messages':
