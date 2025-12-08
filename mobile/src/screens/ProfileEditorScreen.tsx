@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'ProfileEditor'>;
 type Route = RouteProp<AuthStackParamList, 'ProfileEditor'>;
@@ -24,6 +24,7 @@ export function ProfileEditorScreen() {
   const [relationshipStatus, setRelationshipStatus] = useState(route.params.profile.relationshipStatus);
   const [bio, setBio] = useState(route.params.profile.bio ?? '');
   const [location, setLocation] = useState(route.params.profile.location ?? '');
+  const [notifyMatches, setNotifyMatches] = useState(route.params.profile.matchNotificationsEnabled);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +42,7 @@ export function ProfileEditorScreen() {
         relationshipStatus,
         bio: bio.trim(),
         location: location.trim(),
+        matchNotificationsEnabled: notifyMatches,
       };
 
       if (age.trim().length > 0) {
@@ -119,6 +121,14 @@ export function ProfileEditorScreen() {
           numberOfLines={4}
         />
 
+        <View style={styles.toggleRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.label}>Match notifications</Text>
+            <Text style={styles.subheading}>Get notified when someone matches with you.</Text>
+          </View>
+          <Switch value={notifyMatches} onValueChange={setNotifyMatches} disabled={submitting} />
+        </View>
+
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <Pressable style={[styles.button, submitting && styles.buttonDisabled]} onPress={handleSave} disabled={submitting}>
@@ -170,6 +180,11 @@ const styles = StyleSheet.create({
   subheading: {
     color: '#D1D5DB',
     marginBottom: 8,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   label: {
     color: '#E5E7EB',

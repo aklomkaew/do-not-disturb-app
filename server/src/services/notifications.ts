@@ -46,3 +46,34 @@ export async function sendVerificationEmail(to: string, code: string) {
     text,
   });
 }
+
+type MatchNotificationTarget = {
+  displayName: string;
+  email?: string | null;
+  phoneNumber?: string | null;
+};
+
+export async function sendMatchNotification(target: MatchNotificationTarget, counterpartName: string) {
+  const message = `You have a new match with ${counterpartName}! Open the app to start a conversation.`;
+
+  if (target.email && resendClient && env.EMAIL_FROM_ADDRESS) {
+    await resendClient.emails.send({
+      from: env.EMAIL_FROM_ADDRESS,
+      to: target.email,
+      subject: 'You have a new match',
+      text: message,
+    });
+    return;
+  }
+
+  if (target.phoneNumber && twilioClient && env.TWILIO_FROM_NUMBER) {
+    await twilioClient.messages.create({
+      body: message,
+      from: env.TWILIO_FROM_NUMBER,
+      to: target.phoneNumber,
+    });
+    return;
+  }
+
+  console.info(`[match:notify:mock] -> ${target.displayName} :: ${message}`);
+}

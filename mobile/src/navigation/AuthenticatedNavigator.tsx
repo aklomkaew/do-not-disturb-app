@@ -19,6 +19,7 @@ export type ProfilePayload = {
   relationshipStatus: string;
   bio: string;
   location: string | null;
+  matchNotificationsEnabled: boolean;
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();

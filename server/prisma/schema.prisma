@@ -68,6 +68,7 @@ model Profile {
   matchesAsB          Match[]    @relation("MatchesAsB")
   messages            Message[]
   notifications       Notification[]
+  matchNotificationsEnabled Boolean @default(true)
 }
 
 model RefreshToken {
@@ -91,10 +92,9 @@ model Swipe {
   deckSeed         String?
   position         Int?
   createdAt        DateTime       @default(now())
+  revokedAt        DateTime?
   sourceProfile    Profile        @relation("SwipesInitiated", fields: [sourceProfileId], references: [id])
   targetProfile    Profile        @relation("SwipesReceived", fields: [targetProfileId], references: [id])
-
-  @@unique([sourceProfileId, targetProfileId])
 }
 
 model Match {

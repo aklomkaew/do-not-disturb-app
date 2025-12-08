@@ -1,23 +1,49 @@
 import { Router } from 'express';
+import { authGuard } from '../middleware/authGuard';
+import { prisma } from '../services/prisma';
+import { requireProfile } from '../utils/profile';
 
 export const matchesRouter = Router();
 
-matchesRouter.get('/', (_req, res) => {
-  res.status(501).json({ message: 'Match listing not implemented yet' });
-});
+matchesRouter.use(authGuard);
 
-matchesRouter.get('/:matchId', (_req, res) => {
-  res.status(501).json({ message: 'Match detail not implemented yet' });
-});
+matchesRouter.get('/', async (req, res, next) => {
+  try {
+    const profile = await requireProfile(req.user!.id);
 
-matchesRouter.get('/:matchId/messages', (_req, res) => {
-  res.status(501).json({ message: 'Match messages not implemented yet' });
-});
+    const matches = await prisma.match.findMany({
+      where: {
+        OR: [{ profileAId: profile.id }, { profileBId: profile.id }],
+      },
+      orderBy: {
+        lastInteractionAt: 'desc',
+      },
+      include: {
+        profileA: true,
+        profileB: true,
+      },
+    });
 
-matchesRouter.post('/:matchId/messages', (_req, res) => {
-  res.status(501).json({ message: 'Send message not implemented yet' });
-});
+    const serialized = matches.map((match) => {
+      const isA = match.profileAId === profile.id;
+      const partner = isA ? match.profileB : match.profileA;
 
-matchesRouter.get('/inbox', (_req, res) => {
-  res.status(501).json({ message: 'Messages inbox not implemented yet' });
+      return {
+        id: match.id,
+        createdAt: match.createdAt,
+        lastInteractionAt: match.lastInteractionAt,
+        partner: {
+          id: partner.id,
+          displayName: partner.displayName,
+          age: partner.age,
+          location: partner.location,
+          bio: partner.bio,
+        },
+      };
+    });
+
+    res.json({ matches: serialized });
+  } catch (error) {
+    next(error);
+  }
 });

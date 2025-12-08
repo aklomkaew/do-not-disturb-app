@@ -7,7 +7,7 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'CreateProfile'>;
 type Route = RouteProp<AuthStackParamList, 'CreateProfile'>;
@@ -26,6 +26,7 @@ export function CreateProfileScreen() {
   const [relationshipStatus, setRelationshipStatus] = useState<typeof relationshipOptions[number]>('SINGLE');
   const [location, setLocation] = useState('');
   const [bio, setBio] = useState('');
+  const [notifyMatches, setNotifyMatches] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +67,7 @@ export function CreateProfileScreen() {
           relationshipStatus,
           location: location.trim(),
           bio: bio.trim(),
+          matchNotificationsEnabled: notifyMatches,
         }),
       });
 
@@ -132,6 +134,14 @@ export function CreateProfileScreen() {
             placeholderTextColor="#6B7280"
             editable={!submitting}
           />
+
+          <View style={styles.toggleRow}>
+            <View>
+              <Text style={styles.label}>Match notifications</Text>
+              <Text style={styles.copy}>Get notified when someone matches with you.</Text>
+            </View>
+            <Switch value={notifyMatches} onValueChange={setNotifyMatches} disabled={submitting} />
+          </View>
 
           <Text style={styles.label}>Bio</Text>
           <TextInput
@@ -210,6 +220,11 @@ const styles = StyleSheet.create({
   copy: {
     color: '#D1D5DB',
     lineHeight: 20,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   card: {
     padding: 20,

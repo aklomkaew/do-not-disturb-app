@@ -16,6 +16,7 @@ type ProfileResponse = {
   relationshipStatus: string;
   bio: string;
   location: string | null;
+  matchNotificationsEnabled: boolean;
 };
 
 export function ProfileScreen() {
@@ -53,6 +54,7 @@ export function ProfileScreen() {
         relationshipStatus: data.profile.relationshipStatus,
         bio: data.profile.bio,
         location: data.profile.location,
+        matchNotificationsEnabled: data.profile.matchNotificationsEnabled ?? true,
       };
 
       setProfile(normalized);
