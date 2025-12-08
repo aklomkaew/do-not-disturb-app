@@ -3,41 +3,24 @@ import { StatusBanner } from '@/components/StatusBanner';
 import { useAuth } from '@/hooks/useAuth';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
 import { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 type Step = 'request' | 'verify';
-type Method = 'email' | 'phone';
 
 export function LoginScreen() {
   const { requestLoginCode, verifyLoginCode } = useAuth();
   const { status: apiStatus, timestamp } = useHealthCheck();
-  const [method, setMethod] = useState<Method>('email');
   const [step, setStep] = useState<Step>('request');
-  const [identifier, setIdentifier] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [code, setCode] = useState('');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [testCode, setTestCode] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const identifierLabel = method === 'email' ? 'Email address' : 'Phone number';
-  const identifierKeyboard = method === 'email' ? 'email-address' : 'phone-pad';
+  const ctaLabel = useMemo(() => (step === 'request' ? 'Send SMS code' : 'Verify & continue'), [step]);
 
-  const ctaLabel = useMemo(() => {
-    if (step === 'request') {
-      return method === 'email' ? 'Send login link' : 'Send SMS code';
-    }
-    return 'Verify & continue';
-  }, [method, step]);
+  const cleanedPhoneNumber = phoneNumber.trim();
 
   const handleRequest = async () => {
     setSubmitting(true);
@@ -46,13 +29,8 @@ export function LoginScreen() {
     setTestCode(undefined);
 
     try {
-      const payload =
-        method === 'email'
-          ? { method: 'email' as const, email: identifier.trim().toLowerCase() }
-          : { method: 'phone' as const, phoneNumber: identifier.trim() };
-
-      const response = await requestLoginCode(payload);
-      setStatusMessage(`Code sent to ${response.target}`);
+      const response = await requestLoginCode({ method: 'phone', phoneNumber: cleanedPhoneNumber });
+      setStatusMessage(`We sent a code to ${response.target}. Enter it below to continue.`);
       setTestCode(response.testCode);
       setStep('verify');
     } catch (err) {
@@ -67,12 +45,7 @@ export function LoginScreen() {
     setError(null);
 
     try {
-      const payload =
-        method === 'email'
-          ? { method: 'email' as const, email: identifier.trim().toLowerCase(), code }
-          : { method: 'phone' as const, phoneNumber: identifier.trim(), code };
-
-      await verifyLoginCode(payload);
+      await verifyLoginCode({ method: 'phone', phoneNumber: cleanedPhoneNumber, code });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed');
     } finally {
@@ -91,47 +64,33 @@ export function LoginScreen() {
   const canSubmit = () => {
     if (submitting) return false;
     if (step === 'request') {
-      return identifier.trim().length > 3;
+      return cleanedPhoneNumber.length >= 6;
     }
-    return identifier.trim().length > 3 && /^\d{6}$/.test(code.trim());
-  };
-
-  const toggleMethod = (next: Method) => {
-    if (next === method) return;
-    setMethod(next);
-    setIdentifier('');
-    setCode('');
-    setStep('request');
-    setStatusMessage(null);
-    setError(null);
-    setTestCode(undefined);
+    return cleanedPhoneNumber.length >= 6 && /^\d{6}$/.test(code.trim());
   };
 
   return (
     <ScreenContainer>
       <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', android: undefined })} style={{ flex: 1 }}>
         <View style={styles.header}>
-          <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>Use email or phone to receive a secure one-time code.</Text>
+          <Text style={styles.title}>Welcome to Do Not Disturb</Text>
+          <Text style={styles.subtitle}>
+            Enter your phone number to log in or create an account. We’ll text you a one-time code to continue.
+          </Text>
         </View>
 
         <StatusBanner status={apiStatus} timestamp={timestamp} />
 
-        <View style={styles.segment}>
-          <MethodButton label="Email" active={method === 'email'} onPress={() => toggleMethod('email')} />
-          <MethodButton label="Phone" active={method === 'phone'} onPress={() => toggleMethod('phone')} />
-        </View>
-
         <View style={styles.card}>
-          <Text style={styles.label}>{identifierLabel}</Text>
+          <Text style={styles.label}>Phone number</Text>
           <TextInput
             style={styles.input}
-            placeholder={method === 'email' ? 'alex@example.com' : '+1 555 123 4567'}
+            placeholder="+1 555 123 4567"
             placeholderTextColor="#6B7280"
             autoCapitalize="none"
-            keyboardType={identifierKeyboard}
-            value={identifier}
-            onChangeText={setIdentifier}
+            keyboardType="phone-pad"
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
             editable={!submitting}
           />
 
@@ -174,14 +133,6 @@ export function LoginScreen() {
   );
 }
 
-function MethodButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <Pressable style={[styles.methodButton, active && styles.methodButtonActive]} onPress={onPress}>
-      <Text style={[styles.methodButtonLabel, active && styles.methodButtonLabelActive]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   header: {
     gap: 8,
@@ -195,29 +146,6 @@ const styles = StyleSheet.create({
     color: '#D1D5DB',
     fontSize: 16,
     lineHeight: 22,
-  },
-  segment: {
-    flexDirection: 'row',
-    borderRadius: 999,
-    backgroundColor: '#111827',
-    padding: 4,
-    gap: 8,
-  },
-  methodButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 999,
-    alignItems: 'center',
-  },
-  methodButtonActive: {
-    backgroundColor: '#F472B6',
-  },
-  methodButtonLabel: {
-    color: '#9CA3AF',
-    fontWeight: '600',
-  },
-  methodButtonLabelActive: {
-    color: '#0B0B0D',
   },
   card: {
     marginTop: 16,
