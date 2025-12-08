@@ -16,6 +16,7 @@ export function RootNavigator() {
   return (
     <NavigationContainer>
       <Tab.Navigator
+        initialRouteName="Welcome"
         screenOptions={({ route }) => ({
           headerShown: false,
           tabBarStyle: {

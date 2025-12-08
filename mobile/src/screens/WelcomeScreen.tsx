@@ -3,6 +3,7 @@ import { StatusBanner } from '@/components/StatusBanner';
 import { API_BASE_URL } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
+import { useNavigation } from '@react-navigation/native';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -11,6 +12,7 @@ export function WelcomeScreen() {
   const { status, timestamp } = useHealthCheck();
   const [profileStatus, setProfileStatus] = useState<'idle' | 'creating' | 'ready' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const navigation = useNavigation();
 
   const displayNameFallback = useMemo(() => {
     if (user?.email) {
@@ -92,7 +94,11 @@ export function WelcomeScreen() {
         <Callout title="Need texting?" body="Phone login works once SMS providers are connected. Use email OTP in the meantime." />
       </View>
 
-      <Pressable style={styles.cta}>
+      <Pressable
+        style={[styles.cta, profileStatus !== 'ready' && styles.ctaDisabled]}
+        disabled={profileStatus !== 'ready'}
+        onPress={() => navigation.navigate('Swipe' as never)}
+      >
         {profileStatus === 'creating' ? (
           <ActivityIndicator color="#0B0B0D" />
         ) : (
@@ -219,6 +225,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
+  },
+  ctaDisabled: {
+    opacity: 0.5,
   },
   ctaLabel: {
     color: '#0B0B0D',
