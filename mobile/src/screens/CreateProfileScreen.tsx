@@ -2,6 +2,7 @@ import { ScreenContainer } from '@/components/ScreenContainer';
 import { StatusBanner } from '@/components/StatusBanner';
 import { API_BASE_URL } from '@/constants/config';
 import type { AuthStackParamList } from '@/navigation/AuthenticatedNavigator';
+import { useAuth } from '@/hooks/useAuth';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
@@ -15,6 +16,7 @@ export function CreateProfileScreen() {
   const navigation = useNavigation<Navigation>();
   const route = useRoute<Route>();
   const { status, timestamp } = useHealthCheck();
+  const { accessToken } = useAuth();
   const [displayName, setDisplayName] = useState(route.params.initialDisplayName);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,14 +28,19 @@ export function CreateProfileScreen() {
     }
 
     try {
+      if (!accessToken) {
+        throw new Error('Session expired. Please log in again.');
+      }
       setSubmitting(true);
       setError(null);
 
       const response = await fetch(`${API_BASE_URL}/api/profile/bootstrap`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
-          userId: route.params.userId,
           displayName: displayName.trim(),
         }),
       });

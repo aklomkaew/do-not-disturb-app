@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export function WelcomeScreen() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const { status, timestamp } = useHealthCheck();
   const [profileState, setProfileState] = useState<'checking' | 'missing' | 'exists' | 'error'>('checking');
   const [error, setError] = useState<string | null>(null);
@@ -27,16 +27,23 @@ export function WelcomeScreen() {
   }, [user]);
 
   const checkProfile = useCallback(() => {
-    if (!user) return;
+    if (!user || !accessToken) {
+      setProfileState('error');
+      setError('Session not found. Please log in again.');
+      return;
+    }
 
     let cancelled = false;
     setProfileState('checking');
     setError(null);
-    const userId = user.id;
 
     (async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/profile/${userId}`);
+        const response = await fetch(`${API_BASE_URL}/api/profile/me`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
 
         if (response.status === 404) {
           if (!cancelled) setProfileState('missing');
@@ -59,7 +66,7 @@ export function WelcomeScreen() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [accessToken, user]);
 
   useEffect(() => {
     const cancel = checkProfile();
