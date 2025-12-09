@@ -6,9 +6,9 @@ import { useHealthCheck } from '@/hooks/useHealthCheck';
 import type { AuthStackParamList } from '@/navigation/AuthenticatedNavigator';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { cupidTheme, cardShadow } from '@/constants/theme';
+import { cupidTheme } from '@/constants/theme';
 
 export function WelcomeScreen() {
   const { user, accessToken } = useAuth();
@@ -16,6 +16,7 @@ export function WelcomeScreen() {
   const [profileState, setProfileState] = useState<'checking' | 'missing' | 'exists' | 'error'>('checking');
   const [error, setError] = useState<string | null>(null);
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const hasRedirected = useRef(false);
 
   const displayNameFallback = useMemo(() => {
     if (user?.email) {
@@ -78,236 +79,93 @@ export function WelcomeScreen() {
     };
   }, [checkProfile]);
 
-  const handleContinue = () => {
-    if (!user) return;
+  useEffect(() => {
+    if (!user || hasRedirected.current) return;
 
     if (profileState === 'missing') {
-      navigation.navigate('CreateProfile', {
-        initialDisplayName: displayNameFallback,
+      hasRedirected.current = true;
+      navigation.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'CreateProfile',
+            params: { initialDisplayName: displayNameFallback },
+          },
+        ],
       });
     } else if (profileState === 'exists') {
+      hasRedirected.current = true;
       navigation.reset({
         index: 0,
         routes: [{ name: 'MainTabs' }],
       });
     }
-  };
+  }, [displayNameFallback, navigation, profileState, user]);
 
-  const ctaLabel =
+  const isError = profileState === 'error';
+  const loadingCopy =
     profileState === 'missing'
-      ? 'Create your account'
-      : profileState === 'exists'
-      ? 'Start exploring'
-      : 'Checking...';
+      ? 'Hang tight while we spin up your new profile.'
+      : 'Loading your matches and messages.';
 
   return (
     <ScreenContainer>
       <StatusBanner status={status} timestamp={timestamp} />
 
-      <View style={styles.hero}>
-        <Text style={styles.kicker}>You're in 🎉</Text>
-        <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.copy}>
-          Logged in as {user?.email ?? user?.phoneNumber ?? 'mystery guest'}. Head to the tabs below to start swiping, check matches,
-          or finish setting up your profile.
-        </Text>
+      <View style={styles.content}>
+        {isError ? (
+          <>
+            <Text style={styles.title}>We hit a snag</Text>
+            <Text style={styles.copy}>{error ?? 'Unable to confirm your account. Try again in a moment.'}</Text>
+            <Pressable onPress={checkProfile} style={styles.retryButton}>
+              <Text style={styles.retryLabel}>Retry</Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <ActivityIndicator color={cupidTheme.colors.accent} />
+            <Text style={styles.title}>
+              {profileState === 'checking' ? 'Checking your account' : 'Almost there'}
+            </Text>
+            <Text style={styles.copy}>{loadingCopy}</Text>
+          </>
+        )}
       </View>
-
-      <ProfileStatusBadge state={profileState} error={error} onRetry={checkProfile} />
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Account snapshot</Text>
-        <View style={styles.meta}>
-          <Meta label="User ID" value={user?.id} />
-          <Meta label="Role" value={user?.role ?? 'USER'} />
-          <Meta label="Allowlisted" value={user?.allowlisted ? 'Yes' : 'No'} />
-        </View>
-      </View>
-
-      <View style={styles.callouts}>
-        <Callout title="Next steps" body="Finish onboarding in Profile, then explore Swipe and Matches anytime." />
-        <Callout title="Need texting?" body="Phone login works once SMS providers are connected. Use email OTP in the meantime." />
-      </View>
-
-      <Pressable
-        style={[styles.cta, (profileState === 'checking' || profileState === 'error') && styles.ctaDisabled]}
-        disabled={profileState === 'checking' || profileState === 'error'}
-        onPress={handleContinue}
-      >
-        {profileState === 'checking' ? <ActivityIndicator color={cupidTheme.colors.surface} /> : <Text style={styles.ctaLabel}>{ctaLabel}</Text>}
-      </Pressable>
     </ScreenContainer>
   );
 }
 
-function Meta({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <View style={styles.metaRow}>
-      <Text style={styles.metaLabel}>{label}</Text>
-      <Text style={styles.metaValue}>{value ?? '—'}</Text>
-    </View>
-  );
-}
-
-function Callout({ title, body }: { title: string; body: string }) {
-  return (
-    <View style={styles.callout}>
-      <Text style={styles.calloutTitle}>{title}</Text>
-      <Text style={styles.calloutBody}>{body}</Text>
-    </View>
-  );
-}
-
-function ProfileStatusBadge({
-  state,
-  error,
-  onRetry,
-}: {
-  state: 'checking' | 'missing' | 'exists' | 'error';
-  error: string | null;
-  onRetry: () => void;
-}) {
-  let label = 'Checking profile status...';
-  let badgeColor = cupidTheme.colors.warning;
-
-  if (state === 'missing') {
-    label = 'No profile found. Create one to continue.';
-  } else if (state === 'exists') {
-    label = 'Profile ready';
-    badgeColor = cupidTheme.colors.success;
-  } else if (state === 'error') {
-    label = error ?? 'Profile lookup failed';
-    badgeColor = cupidTheme.colors.error;
-  }
-
-  return (
-    <View style={[styles.statusBadge, { borderColor: badgeColor }]}>
-      <Text style={[styles.statusLabel, { color: badgeColor }]}>{label}</Text>
-      {state === 'error' ? (
-        <Pressable onPress={onRetry}>
-          <Text style={styles.retryLabel}>Try again</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  hero: {
-    gap: 8,
-    padding: 26,
-    borderRadius: cupidTheme.radii.xl,
-    backgroundColor: cupidTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: cupidTheme.colors.borderSubtle,
-    ...cardShadow(),
-  },
-  kicker: {
-    color: cupidTheme.colors.accent,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    fontSize: 12,
-    letterSpacing: 1.2,
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+    paddingHorizontal: 24,
   },
   title: {
-    fontSize: 30,
+    fontSize: 22,
     fontWeight: '800',
     color: cupidTheme.colors.textPrimary,
+    textAlign: 'center',
   },
   copy: {
-    marginTop: 10,
     color: cupidTheme.colors.textSecondary,
-    lineHeight: 22,
-  },
-  card: {
-    marginTop: 18,
-    padding: 22,
-    borderRadius: cupidTheme.radii.lg,
-    backgroundColor: cupidTheme.colors.surface,
-    gap: 14,
-    borderWidth: 1,
-    borderColor: cupidTheme.colors.borderSubtle,
-  },
-  cardTitle: {
-    color: cupidTheme.colors.textPrimary,
-    fontWeight: '700',
-    fontSize: 17,
-  },
-  meta: {
-    gap: 12,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  metaLabel: {
-    color: cupidTheme.colors.textMuted,
-    fontSize: 13,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  metaValue: {
-    color: cupidTheme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  callouts: {
-    marginTop: 18,
-    gap: 12,
-  },
-  callout: {
-    padding: 18,
-    borderRadius: cupidTheme.radii.lg,
-    backgroundColor: cupidTheme.colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: cupidTheme.colors.borderSubtle,
-    gap: 6,
-  },
-  calloutTitle: {
-    color: cupidTheme.colors.textPrimary,
-    fontWeight: '700',
     fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
   },
-  calloutBody: {
-    color: cupidTheme.colors.textSecondary,
-    lineHeight: 18,
-  },
-  cta: {
-    marginTop: 18,
+  retryButton: {
+    marginTop: 8,
     backgroundColor: cupidTheme.colors.accent,
-    paddingVertical: 16,
-    borderRadius: cupidTheme.radii.lg,
-    alignItems: 'center',
-    ...cardShadow('floating'),
-  },
-  ctaDisabled: {
-    opacity: 0.6,
-  },
-  ctaLabel: {
-    color: cupidTheme.colors.surface,
-    fontWeight: '800',
-    fontSize: 16,
-    letterSpacing: 0.5,
-  },
-  statusBadge: {
-    marginTop: 18,
-    borderWidth: 1,
-    borderRadius: cupidTheme.radii.lg,
     paddingVertical: 12,
-    paddingHorizontal: 18,
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-    backgroundColor: cupidTheme.colors.surface,
-  },
-  statusLabel: {
-    fontWeight: '600',
-    flex: 1,
-    color: cupidTheme.colors.textPrimary,
+    paddingHorizontal: 28,
+    borderRadius: cupidTheme.radii.lg,
   },
   retryLabel: {
-    color: cupidTheme.colors.accentSecondary,
+    color: cupidTheme.colors.surface,
     fontWeight: '700',
+    fontSize: 15,
   },
 });
 
