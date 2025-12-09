@@ -22,6 +22,7 @@ export function LoginScreen() {
   const ctaLabel = useMemo(() => (step === 'request' ? 'Send SMS code' : 'Verify & continue'), [step]);
 
   const cleanedPhoneNumber = phoneNumber.trim();
+  const normalizedPhoneNumber = useMemo(() => normalizePhoneNumber(cleanedPhoneNumber), [cleanedPhoneNumber]);
 
   const handleRequest = async () => {
     setSubmitting(true);
@@ -30,7 +31,7 @@ export function LoginScreen() {
     setTestCode(undefined);
 
     try {
-      const response = await requestLoginCode({ method: 'phone', phoneNumber: cleanedPhoneNumber });
+      const response = await requestLoginCode({ method: 'phone', phoneNumber: normalizedPhoneNumber });
       setStatusMessage(`We sent a code to ${response.target}. Enter it below to continue.`);
       setTestCode(response.testCode);
       setStep('verify');
@@ -46,7 +47,7 @@ export function LoginScreen() {
     setError(null);
 
     try {
-      await verifyLoginCode({ method: 'phone', phoneNumber: cleanedPhoneNumber, code });
+      await verifyLoginCode({ method: 'phone', phoneNumber: normalizedPhoneNumber, code });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed');
     } finally {
@@ -132,6 +133,26 @@ export function LoginScreen() {
       </KeyboardAvoidingView>
     </ScreenContainer>
   );
+}
+
+function normalizePhoneNumber(input: string) {
+  const trimmed = input.trim();
+  if (!trimmed) return trimmed;
+
+  if (trimmed.startsWith('+')) {
+    return trimmed;
+  }
+
+  const digitsOnly = trimmed.replace(/\D/g, '');
+  if (digitsOnly.length === 10) {
+    return `+1${digitsOnly}`;
+  }
+
+  if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
+    return `+${digitsOnly}`;
+  }
+
+  return trimmed;
 }
 
 const styles = StyleSheet.create({

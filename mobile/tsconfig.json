@@ -11,7 +11,8 @@
       "@/constants/*": ["src/constants/*"],
       "@/providers/*": ["src/providers/*"],
       "@/types/*": ["src/types/*"],
-      "@/theme/*": ["src/theme/*"]
+      "@/theme/*": ["src/theme/*"],
+      "@/utils/*": ["src/utils/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "App.tsx"],

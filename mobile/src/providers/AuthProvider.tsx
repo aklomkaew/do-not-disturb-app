@@ -1,6 +1,6 @@
 import { API_BASE_URL } from '@/constants/config';
+import { deleteSessionItem, getSessionItem, setSessionItem } from '@/utils/sessionStorage';
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import * as SecureStore from 'expo-secure-store';
 
 type LoginMethod = 'email' | 'phone';
 
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const bootstrapSession = useCallback(async () => {
     try {
-      const stored = await SecureStore.getItemAsync(SESSION_KEY);
+      const stored = await getSessionItem(SESSION_KEY);
       if (!stored) {
         setState((prev) => ({ ...prev, status: 'unauthenticated', user: null, accessToken: null, refreshToken: null }));
         return;
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const data = await response.json();
-    await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify({ refreshToken: data.refreshToken }));
+    await setSessionItem(SESSION_KEY, JSON.stringify({ refreshToken: data.refreshToken }));
 
     setState({
       status: 'authenticated',
@@ -134,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json();
-      await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify({ refreshToken: data.refreshToken }));
+      await setSessionItem(SESSION_KEY, JSON.stringify({ refreshToken: data.refreshToken }));
 
       setState({
         status: 'authenticated',
@@ -167,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.warn('Failed to notify server about logout', error);
     } finally {
-      await SecureStore.deleteItemAsync(SESSION_KEY);
+      await deleteSessionItem(SESSION_KEY);
       setState({
         status: 'unauthenticated',
         user: null,
