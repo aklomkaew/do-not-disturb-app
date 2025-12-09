@@ -105,6 +105,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessToken: data.accessToken,
       refreshToken: data.refreshToken,
     });
+
+    console.log('[AuthDebug] accessToken (temp log)', data.accessToken);
   }, []);
 
   const requestLoginCode = useCallback(async (payload: RequestCodePayload) => {
@@ -142,6 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
       });
+
+      console.log('[AuthDebug] accessToken (temp log)', data.accessToken);
     },
     []
   );
