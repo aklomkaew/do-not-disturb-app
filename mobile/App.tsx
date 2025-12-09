@@ -1,11 +1,15 @@
-import { AuthenticatedNavigator } from '@/navigation/AuthenticatedNavigator';
+import { AuthenticatedNavigator, navigationTheme } from '@/navigation/AuthenticatedNavigator';
 import { LoginScreen } from '@/screens/LoginScreen';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { useAuth } from '@/hooks/useAuth';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useFonts } from 'expo-font';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { cupidTheme } from '@/constants/theme';
+
+const LoginStack = createNativeStackNavigator();
 
 export default function App() {
   const [fontsLoaded] = useFonts({});
@@ -37,9 +41,17 @@ function AppShell({ fontsLoaded }: { fontsLoaded: boolean }) {
     );
   }
 
-  if (status === 'authenticated') {
-    return <AuthenticatedNavigator />;
-  }
+  return (
+    <NavigationContainer theme={navigationTheme}>
+      {status === 'authenticated' ? <AuthenticatedNavigator /> : <LoginNavigator />}
+    </NavigationContainer>
+  );
+}
 
-  return <LoginScreen />;
+function LoginNavigator() {
+  return (
+    <LoginStack.Navigator screenOptions={{ headerShown: false }}>
+      <LoginStack.Screen name="Login" component={LoginScreen} />
+    </LoginStack.Navigator>
+  );
 }

@@ -2,7 +2,7 @@ import { RootNavigator } from '@/navigation/RootNavigator';
 import { CreateProfileScreen } from '@/screens/CreateProfileScreen';
 import { ProfileEditorScreen } from '@/screens/ProfileEditorScreen';
 import { WelcomeScreen } from '@/screens/WelcomeScreen';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { cupidTheme } from '@/constants/theme';
 
@@ -21,11 +21,12 @@ export type ProfilePayload = {
   bio: string;
   location: string | null;
   matchNotificationsEnabled: boolean;
+  photos: string[];
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
-const navigationTheme = {
+export const navigationTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
@@ -39,13 +40,11 @@ const navigationTheme = {
 
 export function AuthenticatedNavigator() {
   return (
-    <NavigationContainer theme={navigationTheme}>
-      <Stack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Welcome" component={WelcomeScreen} />
-        <Stack.Screen name="CreateProfile" component={CreateProfileScreen} />
-        <Stack.Screen name="ProfileEditor" component={ProfileEditorScreen} />
-        <Stack.Screen name="MainTabs" component={RootNavigator} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <Stack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Welcome" component={WelcomeScreen} />
+      <Stack.Screen name="CreateProfile" component={CreateProfileScreen} />
+      <Stack.Screen name="ProfileEditor" component={ProfileEditorScreen} />
+      <Stack.Screen name="MainTabs" component={RootNavigator} />
+    </Stack.Navigator>
   );
 }

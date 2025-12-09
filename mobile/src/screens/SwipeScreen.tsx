@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type DeckProfile = {
@@ -14,6 +14,7 @@ type DeckProfile = {
   age: number;
   location: string | null;
   bio: string;
+  photos?: string[];
 };
 
 export function SwipeScreen() {
@@ -132,6 +133,7 @@ export function SwipeScreen() {
         </View>
       ) : currentProfile ? (
         <View style={styles.card}>
+          {currentProfile.photos?.[0] ? <Image source={{ uri: currentProfile.photos[0] }} style={styles.heroImage} /> : null}
           <Text style={styles.heading}>
             {currentProfile.displayName}, {currentProfile.age}
           </Text>
@@ -187,6 +189,12 @@ const styles = StyleSheet.create({
     fontSize: 26,
     color: cupidTheme.colors.textPrimary,
     fontWeight: '800',
+  },
+  heroImage: {
+    width: '100%',
+    height: 260,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
   },
   location: {
     color: cupidTheme.colors.textSecondary,

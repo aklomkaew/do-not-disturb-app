@@ -53,6 +53,14 @@ swipeRouter.get('/deck', async (req, res, next) => {
       orderBy: {
         createdAt: 'asc',
       },
+      select: {
+        id: true,
+        displayName: true,
+        bio: true,
+        age: true,
+        location: true,
+        media: true,
+      },
     });
 
     res.json({
@@ -143,13 +151,21 @@ swipeRouter.post('/rewind', async (req, res, next) => {
   }
 });
 
-function serializeProfileCard(profile: { id: string; displayName: string; bio: string; age: number; location: string | null }) {
+function serializeProfileCard(profile: {
+  id: string;
+  displayName: string;
+  bio: string;
+  age: number;
+  location: string | null;
+  media: unknown;
+}) {
   return {
     id: profile.id,
     displayName: profile.displayName,
     bio: profile.bio,
     age: profile.age,
     location: profile.location,
+    photos: extractPhotos(profile.media),
   };
 }
 
@@ -231,4 +247,11 @@ async function notifyParticipants(match: {
       profileA.displayName
     );
   }
+}
+
+function extractPhotos(media: unknown): string[] {
+  if (!media || typeof media !== 'object') return [];
+  const maybePhotos = (media as { photos?: unknown }).photos;
+  if (!Array.isArray(maybePhotos)) return [];
+  return maybePhotos.filter((p): p is string => typeof p === 'string');
 }

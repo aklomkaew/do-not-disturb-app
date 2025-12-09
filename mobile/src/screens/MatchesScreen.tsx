@@ -3,7 +3,7 @@ import { API_BASE_URL } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type MatchItem = {
@@ -15,6 +15,7 @@ type MatchItem = {
     age: number;
     location: string | null;
     bio: string;
+    photos?: string[];
   };
 };
 
@@ -70,7 +71,7 @@ export function MatchesScreen() {
 
   if (loading) {
     return (
-      <ScreenContainer>
+      <ScreenContainer scrollable={false}>
         <View style={styles.stateCard}>
           <ActivityIndicator color={cupidTheme.colors.accent} />
         </View>
@@ -80,7 +81,7 @@ export function MatchesScreen() {
 
   if (error) {
     return (
-      <ScreenContainer>
+      <ScreenContainer scrollable={false}>
         <View style={styles.stateCard}>
           <Text style={styles.errorText}>{error}</Text>
         </View>
@@ -89,7 +90,7 @@ export function MatchesScreen() {
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer scrollable={false}>
       <FlatList
         data={matches}
         keyExtractor={(item) => item.id}
@@ -97,6 +98,7 @@ export function MatchesScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchMatches(true)} tintColor={cupidTheme.colors.accent} />}
         renderItem={({ item }) => (
           <View style={styles.card}>
+            {item.partner.photos?.[0] ? <Image source={{ uri: item.partner.photos[0] }} style={styles.photo} /> : null}
             <Text style={styles.heading}>
               {item.partner.displayName}, {item.partner.age}
             </Text>
@@ -128,6 +130,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: cupidTheme.colors.borderSubtle,
     ...cardShadow(),
+  },
+  photo: {
+    width: '100%',
+    height: 160,
+    borderRadius: cupidTheme.radii.md,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
   },
   stateCard: {
     padding: 22,

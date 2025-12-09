@@ -7,7 +7,8 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'CreateProfile'>;
@@ -30,6 +31,29 @@ export function CreateProfileScreen() {
   const [notifyMatches, setNotifyMatches] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
+
+  const pickPhotos = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setError('We need access to your photos to upload images.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.8,
+      selectionLimit: 5,
+    });
+
+    if (result.canceled) return;
+
+    const selected = result.assets?.map((asset) => asset.uri).filter(Boolean) ?? [];
+    if (selected.length === 0) return;
+
+    setPhotos((prev) => Array.from(new Set([...prev, ...selected])).slice(0, 5));
+  };
 
   const handleSubmit = async () => {
     if (displayName.trim().length < 2) {
@@ -69,6 +93,7 @@ export function CreateProfileScreen() {
           location: location.trim(),
           bio: bio.trim(),
           matchNotificationsEnabled: notifyMatches,
+          media: { photos },
         }),
       });
 
@@ -88,13 +113,31 @@ export function CreateProfileScreen() {
   };
 
   return (
-    <ScreenContainer>
+    <ScreenContainer scrollable={false}>
       <ScrollView contentContainerStyle={styles.container}>
         <StatusBanner status={status} timestamp={timestamp} />
         <View style={styles.hero}>
           <Text style={styles.kicker}>Create your profile</Text>
           <Text style={styles.title}>Tell the community who you are.</Text>
           <Text style={styles.copy}>Thoughtful answers help us match you with people who share your priorities.</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.label}>Photos (first is your profile picture)</Text>
+          <Text style={styles.helper}>Add up to 5 (3 recommended).</Text>
+          <View style={styles.photoRow}>
+            {photos.map((uri, idx) => (
+              <View key={uri} style={styles.photoItem}>
+                <Image source={{ uri }} style={styles.photo} />
+                <Text style={styles.photoBadge}>{idx === 0 ? 'Profile' : `#${idx + 1}`}</Text>
+              </View>
+            ))}
+            {photos.length < 5 ? (
+              <Pressable style={styles.photoAdd} onPress={pickPhotos} disabled={submitting}>
+                <Text style={styles.photoAddLabel}>+ Add</Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
 
         <View style={styles.card}>
@@ -262,6 +305,56 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 140,
     textAlignVertical: 'top',
+  },
+  photoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  photoItem: {
+    width: 96,
+    height: 120,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.border,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+  },
+  photo: {
+    width: '100%',
+    height: '100%',
+  },
+  photoBadge: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    backgroundColor: cupidTheme.colors.surface,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '700',
+    color: cupidTheme.colors.textPrimary,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+  },
+  photoAdd: {
+    width: 96,
+    height: 120,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.accent,
+    backgroundColor: cupidTheme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoAddLabel: {
+    color: cupidTheme.colors.accent,
+    fontWeight: '700',
+  },
+  helper: {
+    color: cupidTheme.colors.textMuted,
+    marginBottom: 8,
   },
   optionGroup: {
     flexDirection: 'row',

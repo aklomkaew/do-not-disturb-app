@@ -1,13 +1,31 @@
 import { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '@/hooks/useAuth';
 import { cupidTheme } from '@/constants/theme';
 
 interface ScreenContainerProps {
   children: ReactNode;
+  scrollable?: boolean;
+  contentContainerStyle?: StyleProp<ViewStyle>;
 }
 
-export function ScreenContainer({ children }: ScreenContainerProps) {
+export function ScreenContainer({ children, scrollable = true, contentContainerStyle }: ScreenContainerProps) {
+  const { status, logout } = useAuth();
+
+  const content = (
+    <View style={styles.content}>
+      {status === 'authenticated' ? (
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+            <Text style={styles.logoutLabel}>Log out</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+      {children}
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.backdrop} pointerEvents="none">
@@ -15,7 +33,17 @@ export function ScreenContainer({ children }: ScreenContainerProps) {
         <View style={[styles.blob, styles.blobLavender]} />
         <View style={[styles.blob, styles.blobMint]} />
       </View>
-      <View style={styles.content}>{children}</View>
+      {scrollable ? (
+        <ScrollView
+          contentContainerStyle={[styles.scrollContainer, contentContainerStyle]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {content}
+        </ScrollView>
+      ) : (
+        content
+      )}
     </SafeAreaView>
   );
 }
@@ -55,9 +83,28 @@ const styles = StyleSheet.create({
     bottom: 120,
     right: -40,
   },
+  scrollContainer: {
+    flexGrow: 1,
+  },
   content: {
     flex: 1,
     padding: 16,
     gap: 16,
+  },
+  header: {
+    alignItems: 'flex-end',
+  },
+  logoutButton: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: cupidTheme.radii.pill,
+    backgroundColor: cupidTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.border,
+  },
+  logoutLabel: {
+    fontWeight: '700',
+    color: cupidTheme.colors.textSecondary,
   },
 });

@@ -38,6 +38,7 @@ matchesRouter.get('/', async (req, res, next) => {
           age: partner.age,
           location: partner.location,
           bio: partner.bio,
+          photos: extractPhotos(partner.media),
         },
       };
     });
@@ -47,3 +48,10 @@ matchesRouter.get('/', async (req, res, next) => {
     next(error);
   }
 });
+
+function extractPhotos(media: unknown): string[] {
+  if (!media || typeof media !== 'object') return [];
+  const maybePhotos = (media as { photos?: unknown }).photos;
+  if (!Array.isArray(maybePhotos)) return [];
+  return maybePhotos.filter((p): p is string => typeof p === 'string');
+}

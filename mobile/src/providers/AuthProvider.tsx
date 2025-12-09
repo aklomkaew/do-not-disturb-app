@@ -156,6 +156,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     const refreshToken = state.refreshToken;
 
+    setState({
+      status: 'unauthenticated',
+      user: null,
+      accessToken: null,
+      refreshToken: null,
+    });
+
     try {
       if (refreshToken) {
         await fetch(`${API_BASE_URL}/api/auth/logout`, {
@@ -167,13 +174,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.warn('Failed to notify server about logout', error);
     } finally {
-      await deleteSessionItem(SESSION_KEY);
-      setState({
-        status: 'unauthenticated',
-        user: null,
-        accessToken: null,
-        refreshToken: null,
-      });
+      try {
+        await deleteSessionItem(SESSION_KEY);
+      } catch (error) {
+        console.warn('Failed to clear session storage', error);
+      }
     }
   }, [state.refreshToken]);
 

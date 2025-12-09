@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList>;
@@ -18,6 +18,7 @@ type ProfileResponse = {
   bio: string;
   location: string | null;
   matchNotificationsEnabled: boolean;
+  photos: string[];
 };
 
 export function ProfileScreen() {
@@ -26,6 +27,7 @@ export function ProfileScreen() {
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     if (!accessToken) {
@@ -56,6 +58,7 @@ export function ProfileScreen() {
         bio: data.profile.bio,
         location: data.profile.location,
         matchNotificationsEnabled: data.profile.matchNotificationsEnabled ?? true,
+        photos: data.profile.media?.photos ?? [],
       };
 
       setProfile(normalized);
@@ -72,28 +75,53 @@ export function ProfileScreen() {
     }, [fetchProfile])
   );
 
-  const handleLogout = () => {
-    Alert.alert('Log out', 'Are you sure you want to end your session?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Log out',
-        style: 'destructive',
-        onPress: () => {
-          logout().catch((err) => console.warn('Failed to logout', err));
-        },
-      },
-    ]);
-  };
-
   const handleEdit = () => {
     if (!profile) return;
     navigation.navigate('ProfileEditor', { profile });
   };
 
+  const confirmDeleteAccount = () => {
+    Alert.alert('Delete account', 'Are you sure? Your account and matches will be permanently removed.', [
+      { text: 'No', style: 'cancel' },
+      { text: 'Yes, delete it', style: 'destructive', onPress: () => deleteAccount().catch(() => undefined) },
+    ]);
+  };
+
+  const deleteAccount = async () => {
+    if (!accessToken) {
+      Alert.alert('Delete account', 'Session expired. Please log in again.');
+      await logout().catch(() => undefined);
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      const response = await fetch(`${API_BASE_URL}/api/profile/me`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok && response.status !== 204) {
+        throw new Error(await extractError(response));
+      }
+
+      await logout();
+    } catch (err) {
+      Alert.alert('Delete failed', err instanceof Error ? err.message : 'Unable to delete the account right now.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const primaryPhoto = profile?.photos?.[0];
+  
   return (
-    <ScreenContainer>
+    <ScreenContainer scrollable={false}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.card}>
+          {primaryPhoto ? <Image source={{ uri: primaryPhoto }} style={styles.heroImage} /> : null}
           <Text style={styles.heading}>Profile & Settings</Text>
           <Text style={styles.copy}>You are signed in as {user?.email ?? user?.phoneNumber ?? 'unknown user'}.</Text>
 
@@ -133,8 +161,8 @@ export function ProfileScreen() {
             <Pressable style={styles.secondaryButton} onPress={handleEdit} disabled={!profile}>
               <Text style={styles.secondaryButtonLabel}>Edit profile</Text>
             </Pressable>
-            <Pressable style={styles.button} onPress={handleLogout}>
-              <Text style={styles.buttonLabel}>Log out</Text>
+            <Pressable style={[styles.button, deleting && styles.buttonDisabled]} onPress={confirmDeleteAccount} disabled={deleting}>
+              <Text style={styles.buttonLabel}>{deleting ? 'Deleting…' : 'Delete account'}</Text>
             </Pressable>
           </View>
         </View>
@@ -173,6 +201,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: cupidTheme.colors.textPrimary,
     fontWeight: '800',
+  },
+  heroImage: {
+    width: '100%',
+    height: 220,
+    borderRadius: cupidTheme.radii.lg,
+    marginBottom: 12,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
   },
   copy: {
     color: cupidTheme.colors.textSecondary,
@@ -218,6 +253,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
     ...cardShadow('floating'),
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   buttonLabel: {
     color: cupidTheme.colors.surface,
