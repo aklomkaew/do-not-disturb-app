@@ -40,6 +40,11 @@ export function ProfileEditorScreen() {
       return;
     }
 
+    if (!accessToken) {
+      setError('Session expired. Please log in again.');
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
@@ -54,11 +59,7 @@ export function ProfileEditorScreen() {
 
     try {
       setUploading(true);
-      const uploads = [];
-      for (const uri of selected) {
-        uploads.push(uploadImage(uri));
-      }
-      const uploaded = await Promise.all(uploads);
+      const uploaded = await Promise.all(selected.map((uri) => uploadImage({ assetUri: uri, accessToken })));
       setPhotos((prev) => Array.from(new Set([...prev, ...uploaded])).slice(0, 5));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload photos.');

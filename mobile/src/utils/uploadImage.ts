@@ -6,12 +6,25 @@ type UploadResponse = {
   path: string;
 };
 
-export async function uploadImage(assetUri: string, filename?: string): Promise<string> {
+type UploadImageParams = {
+  assetUri: string;
+  accessToken: string | null;
+  filename?: string;
+};
+
+export async function uploadImage({ assetUri, accessToken, filename }: UploadImageParams): Promise<string> {
+  if (!accessToken) {
+    throw new Error('Session expired. Please log in again.');
+  }
+
   const safeName = filename ?? assetUri.split('/').pop() ?? 'photo.jpg';
 
   const signed = await fetch(`${API_BASE_URL}/api/uploads/profile-photo-url`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
     body: JSON.stringify({ filename: safeName }),
   });
 
