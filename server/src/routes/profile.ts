@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { authGuard } from '../middleware/authGuard';
 import { prisma } from '../services/prisma';
+import { resolvePhotoUrl } from '../services/storage';
 
 export const profileRouter = Router();
 
@@ -62,7 +63,7 @@ profileRouter.post('/bootstrap', async (req, res, next) => {
       },
     });
 
-    res.status(201).json({ profile, created: true });
+    res.status(201).json({ profile: await withSignedPhotos(profile), created: true });
   } catch (error) {
     next(error);
   }
@@ -81,7 +82,7 @@ profileRouter.get('/me', async (req, res, next) => {
       return res.status(404).json({ message: 'Profile not found' });
     }
 
-    res.json({ profile });
+    res.json({ profile: await withSignedPhotos(profile) });
   } catch (error) {
     next(error);
   }
@@ -111,7 +112,7 @@ profileRouter.patch('/me', async (req, res, next) => {
       },
     });
 
-    res.json({ profile });
+    res.json({ profile: await withSignedPhotos(profile) });
   } catch (error) {
     next(error);
   }
@@ -180,3 +181,9 @@ profileRouter.delete('/me', async (req, res, next) => {
     next(error);
   }
 });
+
+async function withSignedPhotos<T extends { media: any }>(profile: T) {
+  const photos = Array.isArray(profile.media?.photos) ? (profile.media.photos as string[]) : [];
+  const signed = await Promise.all(photos.map((p) => resolvePhotoUrl(p)));
+  return { ...profile, media: { photos: signed } };
+}

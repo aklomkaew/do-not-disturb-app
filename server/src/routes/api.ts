@@ -5,6 +5,7 @@ import { matchesRouter } from './matches';
 import { profileRouter } from './profile';
 import { swipeRouter } from './swipe';
 import { messagesRouter } from './messages';
+import { uploadsRouter } from './uploads';
 
 export const apiRouter = Router();
 
@@ -15,3 +16,4 @@ apiRouter.use('/swipes', swipeRouter);
 apiRouter.use('/matches', matchesRouter);
 apiRouter.use('/messages', messagesRouter);
 apiRouter.use('/admin', adminRouter);
+apiRouter.use('/uploads', uploadsRouter);

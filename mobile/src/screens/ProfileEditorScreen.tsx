@@ -7,6 +7,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { uploadImage } from '@/utils/uploadImage';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'ProfileEditor'>;
@@ -30,6 +31,7 @@ export function ProfileEditorScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [photos, setPhotos] = useState<string[]>(route.params.profile.photos ?? []);
+  const [uploading, setUploading] = useState(false);
 
   const pickPhotos = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -50,7 +52,19 @@ export function ProfileEditorScreen() {
     const selected = result.assets?.map((asset) => asset.uri).filter(Boolean) ?? [];
     if (selected.length === 0) return;
 
-    setPhotos((prev) => Array.from(new Set([...prev, ...selected])).slice(0, 5));
+    try {
+      setUploading(true);
+      const uploads = [];
+      for (const uri of selected) {
+        uploads.push(uploadImage(uri));
+      }
+      const uploaded = await Promise.all(uploads);
+      setPhotos((prev) => Array.from(new Set([...prev, ...uploaded])).slice(0, 5));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload photos.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -103,7 +117,7 @@ export function ProfileEditorScreen() {
         <Text style={styles.subheading}>Update your basic details anytime.</Text>
 
         <Text style={styles.label}>Photos (first is your profile picture)</Text>
-        <Text style={styles.helper}>Add up to 5 (3 recommended).</Text>
+        <Text style={styles.helper}>{uploading ? 'Uploading...' : 'Add up to 5 (3 recommended).'}</Text>
         <View style={styles.photoRow}>
           {photos.map((uri, idx) => (
             <View key={uri} style={styles.photoItem}>

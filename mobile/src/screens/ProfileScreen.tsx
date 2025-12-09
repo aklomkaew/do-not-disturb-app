@@ -116,7 +116,7 @@ export function ProfileScreen() {
   };
 
   const primaryPhoto = profile?.photos?.[0];
-  
+
   return (
     <ScreenContainer scrollable={false}>
       <ScrollView contentContainerStyle={styles.container}>

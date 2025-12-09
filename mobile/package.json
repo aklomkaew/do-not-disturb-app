@@ -19,6 +19,7 @@
     "@types/react-native": "^0.72.8",
     "expo": "~54.0.26",
     "expo-constants": "~18.0.10",
+    "expo-file-system": "^19.0.20",
     "expo-font": "~14.0.9",
     "expo-image-picker": "^17.0.9",
     "expo-secure-store": "^15.0.8",

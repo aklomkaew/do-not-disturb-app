@@ -21,6 +21,9 @@ const envSchema = z.object({
   EMAIL_PROVIDER: z.enum(['mock', 'resend']).default('mock'),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM_ADDRESS: z.string().email().optional(),
+  SUPABASE_URL: z.string().url(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  SUPABASE_BUCKET: z.string().min(1),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type DeckProfile = {
@@ -132,27 +132,13 @@ export function SwipeScreen() {
           </Pressable>
         </View>
       ) : currentProfile ? (
-        <View style={styles.card}>
-          {currentProfile.photos?.[0] ? <Image source={{ uri: currentProfile.photos[0] }} style={styles.heroImage} /> : null}
-          <Text style={styles.heading}>
-            {currentProfile.displayName}, {currentProfile.age}
-          </Text>
-          <Text style={styles.location}>{currentProfile.location ?? 'Somewhere on Earth'}</Text>
-          <Text style={styles.bio}>{currentProfile.bio}</Text>
-
-          <View style={styles.actions}>
-            <Pressable style={[styles.actionButton, styles.passButton]} onPress={() => handleSwipe('LEFT')} disabled={actionLoading}>
-              <Text style={styles.actionLabel}>Pass</Text>
-            </Pressable>
-            <Pressable style={[styles.actionButton, styles.likeButton]} onPress={() => handleSwipe('RIGHT')} disabled={actionLoading}>
-              <Text style={[styles.actionLabel, styles.actionLabelContrast]}>Like</Text>
-            </Pressable>
-          </View>
-
-          <Pressable style={styles.rewindButton} onPress={handleRewind} disabled={actionLoading}>
-            <Text style={styles.rewindLabel}>Rewind</Text>
-          </Pressable>
-        </View>
+        <ProfileCard
+          profile={currentProfile}
+          onPass={() => handleSwipe('LEFT')}
+          onLike={() => handleSwipe('RIGHT')}
+          onRewind={handleRewind}
+          actionLoading={actionLoading}
+        />
       ) : (
         <View style={styles.stateCard}>
           <Text style={styles.heading}>You’re all caught up!</Text>
@@ -163,6 +149,89 @@ export function SwipeScreen() {
         </View>
       )}
     </ScreenContainer>
+  );
+}
+
+function ProfileCard({
+  profile,
+  onPass,
+  onLike,
+  onRewind,
+  actionLoading,
+}: {
+  profile: DeckProfile;
+  onPass: () => void;
+  onLike: () => void;
+  onRewind: () => void;
+  actionLoading: boolean;
+}) {
+  const photos = profile.photos ?? [];
+  const hasPhotos = photos.length > 0;
+  const width = Dimensions.get('window').width - 32;
+
+  return (
+    <View style={styles.card}>
+      {hasPhotos ? (
+        <PhotoCarousel photos={photos} width={width} />
+      ) : (
+        <View style={[styles.photoFallback, { width }]}>
+          <Text style={styles.photoFallbackText}>No photos yet</Text>
+        </View>
+      )}
+
+      <View style={styles.textOverlay}>
+        <Text style={styles.heading}>
+          {profile.displayName}, {profile.age}
+        </Text>
+        <Text style={styles.location}>{profile.location ?? 'Somewhere on Earth'}</Text>
+        <Text style={styles.bio} numberOfLines={4}>
+          {profile.bio}
+        </Text>
+      </View>
+
+      <View style={styles.actions}>
+        <Pressable style={[styles.actionButton, styles.passButton]} onPress={onPass} disabled={actionLoading}>
+          <Text style={styles.actionLabel}>Pass</Text>
+        </Pressable>
+        <Pressable style={[styles.actionButton, styles.likeButton]} onPress={onLike} disabled={actionLoading}>
+          <Text style={[styles.actionLabel, styles.actionLabelContrast]}>Like</Text>
+        </Pressable>
+      </View>
+
+      <Pressable style={styles.rewindButton} onPress={onRewind} disabled={actionLoading}>
+        <Text style={styles.rewindLabel}>Rewind</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function PhotoCarousel({ photos, width }: { photos: string[]; width: number }) {
+  const [index, setIndex] = useState(0);
+
+  return (
+    <View>
+      <ScrollView
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(event) => {
+          const offsetX = event.nativeEvent.contentOffset.x;
+          setIndex(Math.round(offsetX / width));
+        }}
+        style={{ width }}
+      >
+        {photos.map((uri) => (
+          <Image key={uri} source={{ uri }} style={[styles.heroImage, { width }]} />
+        ))}
+      </ScrollView>
+      {photos.length > 1 ? (
+        <View style={styles.dots}>
+          {photos.map((_, i) => (
+            <View key={i} style={[styles.dot, i === index && styles.dotActive]} />
+          ))}
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -191,10 +260,24 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   heroImage: {
-    width: '100%',
-    height: 260,
+    height: 360,
     borderRadius: cupidTheme.radii.lg,
     backgroundColor: cupidTheme.colors.surfaceMuted,
+    resizeMode: 'cover',
+  },
+  photoFallback: {
+    height: 360,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoFallbackText: {
+    color: cupidTheme.colors.textMuted,
+    fontWeight: '700',
+  },
+  textOverlay: {
+    gap: 6,
   },
   location: {
     color: cupidTheme.colors.textSecondary,
@@ -250,6 +333,21 @@ const styles = StyleSheet.create({
   rewindLabel: {
     color: cupidTheme.colors.accentSecondary,
     fontWeight: '700',
+  },
+  dots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: cupidTheme.colors.border,
+    marginHorizontal: 4,
+  },
+  dotActive: {
+    backgroundColor: cupidTheme.colors.accent,
   },
   secondaryButton: {
     marginTop: 8,

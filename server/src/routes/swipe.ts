@@ -5,6 +5,7 @@ import { authGuard } from '../middleware/authGuard';
 import { prisma } from '../services/prisma';
 import { requireProfile } from '../utils/profile';
 import { sendMatchNotification } from '../services/notifications';
+import { resolvePhotoUrl } from '../services/storage';
 
 export const swipeRouter = Router();
 
@@ -63,8 +64,10 @@ swipeRouter.get('/deck', async (req, res, next) => {
       },
     });
 
+    const profiles = await Promise.all(candidates.map(serializeProfileCard));
+
     res.json({
-      profiles: candidates.map(serializeProfileCard),
+      profiles,
     });
   } catch (error) {
     next(error);
@@ -151,7 +154,7 @@ swipeRouter.post('/rewind', async (req, res, next) => {
   }
 });
 
-function serializeProfileCard(profile: {
+async function serializeProfileCard(profile: {
   id: string;
   displayName: string;
   bio: string;
@@ -159,13 +162,15 @@ function serializeProfileCard(profile: {
   location: string | null;
   media: unknown;
 }) {
+  const photos = await extractPhotos(profile.media);
+
   return {
     id: profile.id,
     displayName: profile.displayName,
     bio: profile.bio,
     age: profile.age,
     location: profile.location,
-    photos: extractPhotos(profile.media),
+    photos,
   };
 }
 
@@ -249,9 +254,10 @@ async function notifyParticipants(match: {
   }
 }
 
-function extractPhotos(media: unknown): string[] {
+async function extractPhotos(media: unknown): Promise<string[]> {
   if (!media || typeof media !== 'object') return [];
   const maybePhotos = (media as { photos?: unknown }).photos;
   if (!Array.isArray(maybePhotos)) return [];
-  return maybePhotos.filter((p): p is string => typeof p === 'string');
+  const urls = maybePhotos.filter((p): p is string => typeof p === 'string');
+  return Promise.all(urls.map((p) => resolvePhotoUrl(p)));
 }
