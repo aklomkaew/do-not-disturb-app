@@ -58,8 +58,13 @@ export function CreateProfileScreen() {
     try {
       setUploading(true);
       const token = await getAccessToken();
-      const uploaded = await Promise.all(selected.map((uri) => uploadImage({ assetUri: uri, accessToken: token })));
-      const entries = uploaded.map(({ path, previewUrl }) => ({ path, url: previewUrl }));
+      const uploaded = await Promise.all(
+        selected.map(async (uri) => {
+          const { path, previewUrl } = await uploadImage({ assetUri: uri, accessToken: token });
+          return { path, url: previewUrl ?? uri };
+        })
+      );
+      const entries = uploaded;
       setPhotos((prev) => mergePhotoEntries(prev, entries));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload photos.');
@@ -144,9 +149,6 @@ export function CreateProfileScreen() {
                   <Text style={styles.photoRemoveLabel}>×</Text>
                 </Pressable>
                 <Text style={styles.photoBadge}>{idx === 0 ? 'Profile' : `#${idx + 1}`}</Text>
-                <Pressable style={styles.photoRemovePill} onPress={() => handleRemovePhoto(photo.path)}>
-                  <Text style={styles.photoRemovePillLabel}>Remove</Text>
-                </Pressable>
               </View>
             ))}
             {photos.length < 5 ? (
@@ -358,20 +360,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
     lineHeight: 18,
-  },
-  photoRemovePill: {
-    position: 'absolute',
-    bottom: 6,
-    right: 6,
-    backgroundColor: 'rgba(0,0,0,0.65)',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  photoRemovePillLabel: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
   },
   photoBadge: {
     position: 'absolute',

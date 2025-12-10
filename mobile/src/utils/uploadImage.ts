@@ -8,7 +8,7 @@ type UploadResponse = {
 
 type UploadResult = {
   path: string;
-  previewUrl: string;
+  previewUrl: string | null;
 };
 
 type UploadImageParams = {
@@ -53,7 +53,13 @@ export async function uploadImage({ assetUri, accessToken, filename }: UploadIma
     throw new Error(`Failed to upload image (${uploadResponse.status})`);
   }
 
-  const previewUrl = await requestPhotoPreview(data.path, accessToken);
+  let previewUrl: string | null = null;
+  try {
+    previewUrl = await requestPhotoPreview(data.path, accessToken);
+  } catch (error) {
+    console.warn('Failed to resolve preview URL', error);
+  }
+
   return { path: data.path, previewUrl };
 }
 
