@@ -13,7 +13,7 @@ const enableAdminTab = process.env.EXPO_PUBLIC_ENABLE_ADMIN === 'true';
 export function RootNavigator() {
   return (
     <Tab.Navigator
-      initialRouteName="Swipe"
+      initialRouteName="Explore"
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
@@ -35,7 +35,7 @@ export function RootNavigator() {
         },
       })}
     >
-      <Tab.Screen name="Swipe" component={SwipeScreen} />
+      <Tab.Screen name="Explore" component={SwipeScreen} />
       <Tab.Screen name="Matches" component={MatchesScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
       {enableAdminTab && <Tab.Screen name="Admin" component={AdminScreen} />}
@@ -45,8 +45,8 @@ export function RootNavigator() {
 
 function iconForRoute(routeName: string): keyof typeof Ionicons.glyphMap {
   switch (routeName) {
-    case 'Swipe':
-      return 'flame-outline';
+    case 'Explore':
+      return 'compass-outline';
     case 'Matches':
       return 'heart-outline';
     case 'Profile':

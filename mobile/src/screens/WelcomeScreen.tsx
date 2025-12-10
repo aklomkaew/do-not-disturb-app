@@ -149,7 +149,7 @@ export function WelcomeScreen() {
   const checklist = [
     { label: 'Confirm session', detail: 'Refresh tokens & fetch member status.' },
     { label: 'Bootstrap profile', detail: 'Make sure your basics & photos are ready.' },
-    { label: 'Route to experience', detail: 'Drop you into swiping or the matches hub.' },
+    { label: 'Route to experience', detail: 'Drop you into Explore or the matches hub.' },
   ];
 
   return (
