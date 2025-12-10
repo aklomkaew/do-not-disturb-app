@@ -7,6 +7,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -116,6 +117,7 @@ export function ProfileScreen() {
   };
 
   const primaryPhoto = profile?.photos?.[0];
+  const secondaryPhotos = profile?.photos?.slice(1) ?? [];
 
   return (
     <ScreenContainer scrollable={false}>
@@ -124,6 +126,11 @@ export function ProfileScreen() {
           {primaryPhoto ? <Image source={{ uri: primaryPhoto }} style={styles.heroImage} /> : null}
           <Text style={styles.heading}>Profile & Settings</Text>
           <Text style={styles.copy}>You are signed in as {user?.email ?? user?.phoneNumber ?? 'unknown user'}.</Text>
+          <View style={styles.accountPills}>
+            <AccountPill icon="shield-checkmark-outline" label={`Role · ${user?.role ?? 'USER'}`} highlight />
+            <AccountPill icon="checkmark-done-outline" label={user?.allowlisted ? 'Allowlisted access' : 'Awaiting allowlist'} />
+            <AccountPill icon="notifications-outline" label={profile?.matchNotificationsEnabled ? 'Notifications on' : 'Notifications off'} />
+          </View>
 
           {status === 'loading' ? (
             <ActivityIndicator color={cupidTheme.colors.accent} style={{ marginTop: 16 }} />
@@ -145,6 +152,13 @@ export function ProfileScreen() {
                 <Text style={styles.metaLabel}>Bio</Text>
                 <Text style={styles.bio}>{profile.bio}</Text>
               </View>
+              {secondaryPhotos.length > 0 ? (
+                <View style={styles.photoStrip}>
+                  {secondaryPhotos.map((uri) => (
+                    <Image key={uri} source={{ uri }} style={styles.photoThumb} />
+                  ))}
+                </View>
+              ) : null}
             </View>
           ) : null}
 
@@ -162,6 +176,7 @@ export function ProfileScreen() {
               <Text style={styles.secondaryButtonLabel}>Edit profile</Text>
             </Pressable>
             <Pressable style={[styles.button, deleting && styles.buttonDisabled]} onPress={confirmDeleteAccount} disabled={deleting}>
+              <Ionicons name="trash-outline" size={18} color={cupidTheme.colors.surface} />
               <Text style={styles.buttonLabel}>{deleting ? 'Deleting…' : 'Delete account'}</Text>
             </Pressable>
           </View>
@@ -187,6 +202,8 @@ function formatLabel(value: string) {
 const styles = StyleSheet.create({
   container: {
     paddingBottom: 36,
+    paddingHorizontal: 16,
+    gap: 16,
   },
   card: {
     padding: 22,
@@ -212,6 +229,12 @@ const styles = StyleSheet.create({
   copy: {
     color: cupidTheme.colors.textSecondary,
     fontSize: 15,
+  },
+  accountPills: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
   },
   details: {
     marginTop: 10,
@@ -243,6 +266,17 @@ const styles = StyleSheet.create({
     color: cupidTheme.colors.textSecondary,
     lineHeight: 20,
   },
+  photoStrip: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  photoThumb: {
+    width: 96,
+    height: 120,
+    borderRadius: cupidTheme.radii.md,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+  },
   actions: {
     marginTop: 18,
     gap: 10,
@@ -252,6 +286,9 @@ const styles = StyleSheet.create({
     backgroundColor: cupidTheme.colors.error,
     paddingVertical: 14,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
     ...cardShadow('floating'),
   },
   buttonDisabled: {
@@ -281,6 +318,41 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: cupidTheme.colors.error,
+  },
+});
+
+function AccountPill({ icon, label, highlight }: { icon: keyof typeof Ionicons.glyphMap; label: string; highlight?: boolean }) {
+  return (
+    <View
+      style={[
+        pillStyles.pill,
+        highlight && {
+          borderColor: cupidTheme.colors.accent,
+          backgroundColor: cupidTheme.colors.accentSoft,
+        },
+      ]}
+    >
+      <Ionicons name={icon} size={14} color={highlight ? cupidTheme.colors.accent : cupidTheme.colors.textMuted} />
+      <Text style={[pillStyles.label, highlight && { color: cupidTheme.colors.textPrimary }]}>{label}</Text>
+    </View>
+  );
+}
+
+const pillStyles = StyleSheet.create({
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: cupidTheme.radii.pill,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  label: {
+    fontSize: 12,
+    color: cupidTheme.colors.textMuted,
+    fontWeight: '700',
   },
 });
 

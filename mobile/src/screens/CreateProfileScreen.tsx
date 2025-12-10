@@ -11,6 +11,7 @@ import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Switch, Te
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
 import { cupidTheme, cardShadow } from '@/constants/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'CreateProfile'>;
 type Route = RouteProp<AuthStackParamList, 'CreateProfile'>;
@@ -134,6 +135,11 @@ export function CreateProfileScreen() {
           <Text style={styles.kicker}>Create your profile</Text>
           <Text style={styles.title}>Tell the community who you are.</Text>
           <Text style={styles.copy}>Thoughtful answers help us match you with people who share your priorities.</Text>
+          <View style={styles.requirements}>
+            <Requirement text="At least one photo" />
+            <Requirement text="Bio with 20+ characters" />
+            <Requirement text="Location or timezone" />
+          </View>
         </View>
 
         <View style={styles.card}>
@@ -288,6 +294,10 @@ const styles = StyleSheet.create({
     color: cupidTheme.colors.textSecondary,
     lineHeight: 20,
   },
+  requirements: {
+    marginTop: 8,
+    gap: 6,
+  },
   toggleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -413,6 +423,27 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 16,
     letterSpacing: 0.4,
+  },
+});
+
+function Requirement({ text }: { text: string }) {
+  return (
+    <View style={requirementStyles.row}>
+      <Ionicons name="checkmark-circle-outline" size={16} color={cupidTheme.colors.accent} />
+      <Text style={requirementStyles.label}>{text}</Text>
+    </View>
+  );
+}
+
+const requirementStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  label: {
+    color: cupidTheme.colors.textSecondary,
+    fontSize: 13,
   },
 });
 

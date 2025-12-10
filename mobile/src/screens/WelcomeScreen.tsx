@@ -8,7 +8,8 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { cupidTheme } from '@/constants/theme';
+import { cupidTheme, cardShadow } from '@/constants/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 export function WelcomeScreen() {
   const { user, accessToken } = useAuth();
@@ -105,67 +106,197 @@ export function WelcomeScreen() {
   const isError = profileState === 'error';
   const loadingCopy =
     profileState === 'missing'
-      ? 'Hang tight while we spin up your new profile.'
-      : 'Loading your matches and messages.';
+      ? 'Hang tight while we spin up the rest of your onboarding.'
+      : 'Loading your matches, preferences, and messages.';
+
+  const statusMeta = (() => {
+    switch (profileState) {
+      case 'checking':
+        return {
+          icon: 'time-outline' as const,
+          label: 'Confirming your account',
+          helper: 'Verifying invite status and refreshing your tokens.',
+          color: cupidTheme.colors.warning,
+        };
+      case 'missing':
+        return {
+          icon: 'person-add-outline' as const,
+          label: 'Profile needed',
+          helper: 'Redirecting you to finish your onboarding momentarily.',
+          color: cupidTheme.colors.accent,
+        };
+      case 'exists':
+        return {
+          icon: 'sparkles-outline' as const,
+          label: 'All set',
+          helper: 'Loading your personalized experience.',
+          color: cupidTheme.colors.success,
+        };
+      case 'error':
+      default:
+        return {
+          icon: 'alert-circle-outline' as const,
+          label: 'We hit a snag',
+          helper: error ?? 'Unable to confirm your account. Try again shortly.',
+          color: cupidTheme.colors.error,
+        };
+    }
+  })();
+
+  const progressIndex =
+    profileState === 'checking' ? 0 : profileState === 'missing' ? 1 : profileState === 'exists' ? 2 : profileState === 'error' ? 0 : 0;
+
+  const checklist = [
+    { label: 'Confirm session', detail: 'Refresh tokens & fetch member status.' },
+    { label: 'Bootstrap profile', detail: 'Make sure your basics & photos are ready.' },
+    { label: 'Route to experience', detail: 'Drop you into swiping, matches, or inbox.' },
+  ];
 
   return (
     <ScreenContainer>
       <StatusBanner status={status} timestamp={timestamp} />
 
-      <View style={styles.content}>
-        {isError ? (
-          <>
-            <Text style={styles.title}>We hit a snag</Text>
-            <Text style={styles.copy}>{error ?? 'Unable to confirm your account. Try again in a moment.'}</Text>
+      <View style={styles.stack}>
+        <View style={styles.statusCard}>
+          <View style={[styles.iconBadge, { backgroundColor: `${statusMeta.color}1A` }]}>
+            <Ionicons name={statusMeta.icon} size={28} color={statusMeta.color} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>{statusMeta.label}</Text>
+            <Text style={styles.copy}>{statusMeta.helper}</Text>
+          </View>
+          {isError ? (
             <Pressable onPress={checkProfile} style={styles.retryButton}>
               <Text style={styles.retryLabel}>Retry</Text>
             </Pressable>
-          </>
-        ) : (
-          <>
-            <ActivityIndicator color={cupidTheme.colors.accent} />
-            <Text style={styles.title}>
-              {profileState === 'checking' ? 'Checking your account' : 'Almost there'}
-            </Text>
-            <Text style={styles.copy}>{loadingCopy}</Text>
-          </>
-        )}
+          ) : (
+            <ActivityIndicator color={statusMeta.color} />
+          )}
+        </View>
+
+        <View style={styles.timeline}>
+          {checklist.map((item, index) => {
+            const state = index < progressIndex ? 'done' : index === progressIndex ? 'active' : 'next';
+            return (
+              <View
+                key={item.label}
+                style={[
+                  styles.timelineRow,
+                  state !== 'next' && { borderColor: cupidTheme.colors.accent },
+                  state === 'done' && { backgroundColor: cupidTheme.colors.accentSoft },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.timelineDot,
+                    (state === 'active' || state === 'done') && { backgroundColor: cupidTheme.colors.accent },
+                  ]}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.timelineLabel, state !== 'next' && { color: cupidTheme.colors.textPrimary }]}>{item.label}</Text>
+                  <Text style={styles.timelineCopy}>{item.detail}</Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
+        <View style={styles.tipCard}>
+          <Text style={styles.tipTitle}>Why the pause?</Text>
+          <Text style={styles.tipCopy}>{loadingCopy}</Text>
+          <Text style={styles.tipCopy}>We keep doors closed to bots & time-wasters—thank you for your patience.</Text>
+        </View>
       </View>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    flex: 1,
-    justifyContent: 'center',
+  stack: {
+    gap: 18,
+  },
+  statusCard: {
+    padding: 20,
+    borderRadius: cupidTheme.radii.xl,
+    backgroundColor: cupidTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    paddingHorizontal: 24,
+    ...cardShadow(),
   },
   title: {
     fontSize: 22,
     fontWeight: '800',
     color: cupidTheme.colors.textPrimary,
-    textAlign: 'center',
   },
   copy: {
     color: cupidTheme.colors.textSecondary,
     fontSize: 15,
     lineHeight: 22,
-    textAlign: 'center',
+  },
+  iconBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   retryButton: {
-    marginTop: 8,
     backgroundColor: cupidTheme.colors.accent,
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    borderRadius: cupidTheme.radii.lg,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: cupidTheme.radii.pill,
   },
   retryLabel: {
     color: cupidTheme.colors.surface,
     fontWeight: '700',
     fontSize: 15,
+  },
+  timeline: {
+    gap: 10,
+  },
+  timelineRow: {
+    flexDirection: 'row',
+    gap: 12,
+    borderRadius: cupidTheme.radii.lg,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+    padding: 14,
+    alignItems: 'center',
+  },
+  timelineDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: cupidTheme.colors.border,
+  },
+  timelineLabel: {
+    fontWeight: '700',
+    color: cupidTheme.colors.textSecondary,
+  },
+  timelineCopy: {
+    color: cupidTheme.colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  tipCard: {
+    padding: 18,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+    gap: 6,
+  },
+  tipTitle: {
+    fontWeight: '700',
+    color: cupidTheme.colors.textPrimary,
+  },
+  tipCopy: {
+    color: cupidTheme.colors.textSecondary,
+    lineHeight: 20,
   },
 });
 

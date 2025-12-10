@@ -9,6 +9,7 @@ import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Switch, Te
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
 import { cupidTheme, cardShadow } from '@/constants/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'ProfileEditor'>;
 type Route = RouteProp<AuthStackParamList, 'ProfileEditor'>;
@@ -115,6 +116,10 @@ export function ProfileEditorScreen() {
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.heading}>Edit profile</Text>
         <Text style={styles.subheading}>Update your basic details anytime.</Text>
+        <View style={styles.tipCard}>
+          <Ionicons name="bulb-outline" size={18} color={cupidTheme.colors.accent} />
+          <Text style={styles.tipCopy}>Profiles with 3+ photos and detailed bios see 2.4× more matches.</Text>
+        </View>
 
         <Text style={styles.label}>Photos (first is your profile picture)</Text>
         <Text style={styles.helper}>{uploading ? 'Uploading...' : 'Add up to 5 (3 recommended).'}</Text>
@@ -242,6 +247,21 @@ const styles = StyleSheet.create({
   subheading: {
     color: cupidTheme.colors.textSecondary,
     marginBottom: 8,
+  },
+  tipCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 14,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+  },
+  tipCopy: {
+    color: cupidTheme.colors.textSecondary,
+    flex: 1,
+    lineHeight: 18,
   },
   helper: {
     color: cupidTheme.colors.textMuted,
