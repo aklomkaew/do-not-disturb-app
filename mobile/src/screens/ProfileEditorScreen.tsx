@@ -123,9 +123,12 @@ export function ProfileEditorScreen() {
         <View style={styles.photoRow}>
           {photos.map((photo, idx) => (
             <View key={photo.path} style={styles.photoItem}>
-              <Image source={{ uri: photo.url }} style={styles.photo} />
-              <Pressable style={styles.photoRemove} onPress={() => handleRemovePhoto(photo.path)}>
+              <Image source={{ uri: photo.url ?? photo.path }} style={styles.photo} />
+              <Pressable style={styles.photoRemove} onPress={() => handleRemovePhoto(photo.path)} accessibilityLabel="Remove photo">
                 <Text style={styles.photoRemoveLabel}>×</Text>
+              </Pressable>
+              <Pressable style={styles.photoRemovePill} onPress={() => handleRemovePhoto(photo.path)}>
+                <Text style={styles.photoRemovePillLabel}>Remove</Text>
               </Pressable>
               <Text style={styles.photoBadge}>{idx === 0 ? 'Profile' : `#${idx + 1}`}</Text>
             </View>
@@ -310,6 +313,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
     lineHeight: 18,
+  },
+  photoRemovePill: {
+    position: 'absolute',
+    bottom: 6,
+    right: 6,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  photoRemovePillLabel: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   photoBadge: {
     position: 'absolute',

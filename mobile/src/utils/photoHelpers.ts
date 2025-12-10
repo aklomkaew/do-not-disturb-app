@@ -22,9 +22,13 @@ export function mergePhotoEntries(current: PhotoEntry[], additions: PhotoEntry[]
   const merged: PhotoEntry[] = [];
 
   for (const entry of [...current, ...additions]) {
+    if (!entry.path) continue;
     if (seen.has(entry.path)) continue;
     seen.add(entry.path);
-    merged.push(entry);
+    merged.push({
+      path: entry.path,
+      url: entry.url ?? entry.path,
+    });
     if (merged.length === limit) break;
   }
 
