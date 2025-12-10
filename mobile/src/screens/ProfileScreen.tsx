@@ -119,13 +119,18 @@ export function ProfileScreen() {
   const primaryPhoto = profile?.photos?.[0];
   const secondaryPhotos = profile?.photos?.slice(1) ?? [];
 
+  const greetingName =
+    profile?.displayName ??
+    user?.email?.split('@')[0] ??
+    (user?.phoneNumber ? `User ${user.phoneNumber.slice(-4)}` : 'there');
+
   return (
     <ScreenContainer scrollable={false}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.card}>
           {primaryPhoto ? <Image source={{ uri: primaryPhoto }} style={styles.heroImage} /> : null}
           <Text style={styles.heading}>Profile & Settings</Text>
-          <Text style={styles.copy}>You are signed in as {user?.email ?? user?.phoneNumber ?? 'unknown user'}.</Text>
+          <Text style={styles.greeting}>Hello {greetingName}</Text>
 
           {status === 'loading' ? (
             <ActivityIndicator color={cupidTheme.colors.accent} style={{ marginTop: 16 }} />
@@ -205,6 +210,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: cupidTheme.colors.textPrimary,
     fontWeight: '800',
+  },
+  greeting: {
+    color: cupidTheme.colors.textSecondary,
+    fontSize: 16,
+    marginTop: 2,
   },
   heroImage: {
     width: '100%',
