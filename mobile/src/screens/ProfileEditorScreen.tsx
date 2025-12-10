@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
-import { PhotoEntry, hydratePhotoEntries, mergePhotoEntries } from '@/utils/photoHelpers';
+import { PhotoEntry, hydratePhotoEntries, mergePhotoEntries, partitionSupportedAssets } from '@/utils/photoHelpers';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'ProfileEditor'>;
@@ -36,6 +36,8 @@ export function ProfileEditorScreen() {
   const [uploading, setUploading] = useState(false);
 
   const pickPhotos = async () => {
+    setError(null);
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       setError('We need access to your photos to upload images.');
@@ -51,7 +53,15 @@ export function ProfileEditorScreen() {
 
     if (result.canceled) return;
 
-    const selected = result.assets?.map((asset) => asset.uri).filter(Boolean) ?? [];
+    const assets = result.assets ?? [];
+    const { supported, rejected } = partitionSupportedAssets(assets);
+    if (rejected.length > 0) {
+      setError(
+        `Skipped ${rejected.length} unsupported file${rejected.length > 1 ? 's' : ''}. Only JPG, JPEG, PNG, and WEBP images are supported.`
+      );
+    }
+
+    const selected = supported.map((asset) => asset.uri).filter(Boolean);
     if (selected.length === 0) return;
 
     try {
