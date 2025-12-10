@@ -18,8 +18,8 @@ export function IntroScreen({ onGetStarted }: IntroScreenProps) {
         <Text style={styles.kicker}>Do Not Disturb</Text>
         <Text style={styles.title}>Modern dating, focused on real connection.</Text>
         <Text style={styles.copy}>
-          Use email or phone to request a one-time code. Once you’re in, explore curated matches, private messaging, and put your
-          time back in your control.
+          Use email or phone to request a one-time code. Once you’re in, explore curated matches, respectful pacing, and put your time
+          back in your control.
         </Text>
       </View>
       <View style={styles.card}>

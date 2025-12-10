@@ -31,3 +31,19 @@ export async function resolvePhotoUrl(value: string): Promise<string> {
   }
   return signedUrl(value);
 }
+
+export function extractPhotoPaths(media: unknown): string[] {
+  if (!media || typeof media !== 'object') return [];
+  const maybePhotos = (media as { photos?: unknown }).photos;
+  if (!Array.isArray(maybePhotos)) return [];
+  return maybePhotos.filter((p): p is string => typeof p === 'string' && p.length > 0);
+}
+
+export async function resolveMediaPhotos(media: unknown) {
+  const photoPaths = extractPhotoPaths(media);
+  if (photoPaths.length === 0) {
+    return { photoPaths: [], photos: [] as string[] };
+  }
+  const photos = await Promise.all(photoPaths.map((path) => resolvePhotoUrl(path)));
+  return { photoPaths, photos };
+}

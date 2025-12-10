@@ -10,7 +10,10 @@ import { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
+import { PhotoEntry, mergePhotoEntries, partitionSupportedAssets } from '@/utils/photoHelpers';
 import { cupidTheme, cardShadow } from '@/constants/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { updatePreferredName } from '@/hooks/usePreferredName';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'CreateProfile'>;
 type Route = RouteProp<AuthStackParamList, 'CreateProfile'>;
@@ -22,20 +25,22 @@ export function CreateProfileScreen() {
   const navigation = useNavigation<Navigation>();
   const route = useRoute<Route>();
   const { status, timestamp } = useHealthCheck();
-  const { accessToken } = useAuth();
+  const { getAccessToken } = useAuth();
   const [displayName, setDisplayName] = useState(route.params.initialDisplayName);
   const [age, setAge] = useState('');
   const [gender, setGender] = useState<typeof genderOptions[number]>('OTHER');
   const [relationshipStatus, setRelationshipStatus] = useState<typeof relationshipOptions[number]>('SINGLE');
-  const [location, setLocation] = useState('');
+  const [instagramHandle, setInstagramHandle] = useState('');
   const [bio, setBio] = useState('');
   const [notifyMatches, setNotifyMatches] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<PhotoEntry[]>([]);
   const [uploading, setUploading] = useState(false);
 
   const pickPhotos = async () => {
+    setError(null);
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       setError('We need access to your photos to upload images.');
@@ -51,17 +56,28 @@ export function CreateProfileScreen() {
 
     if (result.canceled) return;
 
-    const selected = result.assets?.map((asset) => asset.uri).filter(Boolean) ?? [];
+    const assets = result.assets ?? [];
+    const { supported, rejected } = partitionSupportedAssets(assets);
+    if (rejected.length > 0) {
+      setError(
+        `Skipped ${rejected.length} unsupported file${rejected.length > 1 ? 's' : ''}. Only JPG, JPEG, PNG, and WEBP images are supported.`
+      );
+    }
+
+    const selected = supported.map((asset) => asset.uri).filter(Boolean);
     if (selected.length === 0) return;
 
     try {
       setUploading(true);
-      const uploads = [];
-      for (const uri of selected) {
-        uploads.push(uploadImage(uri));
-      }
-      const uploaded = await Promise.all(uploads);
-      setPhotos((prev) => Array.from(new Set([...prev, ...uploaded])).slice(0, 5));
+      const token = await getAccessToken();
+      const uploaded = await Promise.all(
+        selected.map(async (uri) => {
+          const { path, previewUrl } = await uploadImage({ assetUri: uri, accessToken: token });
+          return { path, url: previewUrl ?? uri };
+        })
+      );
+      const entries = uploaded;
+      setPhotos((prev) => mergePhotoEntries(prev, entries));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload photos.');
     } finally {
@@ -87,33 +103,33 @@ export function CreateProfileScreen() {
     }
 
     try {
-      if (!accessToken) {
-        throw new Error('Session expired. Please log in again.');
-      }
       setSubmitting(true);
       setError(null);
 
+      const token = await getAccessToken();
       const response = await fetch(`${API_BASE_URL}/api/profile/bootstrap`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           displayName: displayName.trim(),
           age: parsedAge,
           gender,
           relationshipStatus,
-          location: location.trim(),
+          instagramHandle: instagramHandle.trim().replace(/^@/, '') || null,
           bio: bio.trim(),
           matchNotificationsEnabled: notifyMatches,
-          media: { photos },
+          media: { photos: photos.map((photo) => photo.path) },
         }),
       });
 
       if (!response.ok) {
         throw new Error(await extractError(response));
       }
+
+      updatePreferredName(displayName.trim());
 
       navigation.reset({
         index: 0,
@@ -134,15 +150,23 @@ export function CreateProfileScreen() {
           <Text style={styles.kicker}>Create your profile</Text>
           <Text style={styles.title}>Tell the community who you are.</Text>
           <Text style={styles.copy}>Thoughtful answers help us match you with people who share your priorities.</Text>
+          <View style={styles.requirements}>
+            <Requirement text="At least one photo" />
+            <Requirement text="Bio with 20+ characters" />
+            <Requirement text="Optional Instagram for deeper context" />
+          </View>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.label}>Photos (first is your profile picture)</Text>
           <Text style={styles.helper}>{uploading ? 'Uploading...' : 'Add up to 5 (3 recommended).'}</Text>
           <View style={styles.photoRow}>
-            {photos.map((uri, idx) => (
-              <View key={uri} style={styles.photoItem}>
-                <Image source={{ uri }} style={styles.photo} />
+            {photos.map((photo, idx) => (
+              <View key={photo.path} style={styles.photoItem}>
+                <Image source={{ uri: photo.url ?? photo.path }} style={styles.photo} />
+                <Pressable style={styles.photoRemove} onPress={() => handleRemovePhoto(photo.path)} accessibilityLabel="Remove photo">
+                  <Text style={styles.photoRemoveLabel}>×</Text>
+                </Pressable>
                 <Text style={styles.photoBadge}>{idx === 0 ? 'Profile' : `#${idx + 1}`}</Text>
               </View>
             ))}
@@ -183,13 +207,14 @@ export function CreateProfileScreen() {
           <Text style={styles.label}>Relationship status</Text>
           <OptionGroup options={relationshipOptions} value={relationshipStatus} onChange={setRelationshipStatus} disabled={submitting} />
 
-          <Text style={styles.label}>Location</Text>
+          <Text style={styles.label}>Instagram handle</Text>
           <TextInput
             style={styles.input}
-            value={location}
-            onChangeText={setLocation}
-            placeholder="City, Country"
+            value={instagramHandle}
+            onChangeText={setInstagramHandle}
+            placeholder="@yourhandle"
             placeholderTextColor={cupidTheme.colors.textMuted}
+            autoCapitalize="none"
             editable={!submitting}
           />
 
@@ -212,7 +237,7 @@ export function CreateProfileScreen() {
             style={[styles.input, styles.textArea]}
             value={bio}
             onChangeText={setBio}
-            placeholder="Share what makes you tick, your boundaries, or your perfect Do Not Disturb day."
+            placeholder="Three adjectives, your current obsessions, and why someone should date you."
             placeholderTextColor={cupidTheme.colors.textMuted}
             editable={!submitting}
             multiline
@@ -288,6 +313,10 @@ const styles = StyleSheet.create({
     color: cupidTheme.colors.textSecondary,
     lineHeight: 20,
   },
+  requirements: {
+    marginTop: 8,
+    gap: 6,
+  },
   toggleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -337,6 +366,24 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: '100%',
+  },
+  photoRemove: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  photoRemoveLabel: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+    lineHeight: 18,
   },
   photoBadge: {
     position: 'absolute',
@@ -413,6 +460,27 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 16,
     letterSpacing: 0.4,
+  },
+});
+
+function Requirement({ text }: { text: string }) {
+  return (
+    <View style={requirementStyles.row}>
+      <Ionicons name="checkmark-circle-outline" size={16} color={cupidTheme.colors.accent} />
+      <Text style={requirementStyles.label}>{text}</Text>
+    </View>
+  );
+}
+
+const requirementStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  label: {
+    color: cupidTheme.colors.textSecondary,
+    fontSize: 13,
   },
 });
 

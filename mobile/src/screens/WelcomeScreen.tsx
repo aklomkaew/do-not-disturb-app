@@ -8,7 +8,9 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { cupidTheme } from '@/constants/theme';
+import { cupidTheme, cardShadow } from '@/constants/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { usePreferredName } from '@/hooks/usePreferredName';
 
 export function WelcomeScreen() {
   const { user, accessToken } = useAuth();
@@ -17,16 +19,20 @@ export function WelcomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const hasRedirected = useRef(false);
+  const preferredName = usePreferredName();
 
   const displayNameFallback = useMemo(() => {
+    if (preferredName) {
+      return preferredName;
+    }
     if (user?.email) {
       return user.email.split('@')[0];
     }
-    if (user?.phoneNumber) {
-      return `User ${user.phoneNumber.slice(-4)}`;
+    if (user?.id) {
+      return `Member ${user.id.slice(0, 6)}`;
     }
-    return `User ${user?.id.slice(0, 6)}`;
-  }, [user]);
+    return 'Friend';
+  }, [preferredName, user]);
 
   const checkProfile = useCallback(() => {
     if (!user || !accessToken) {

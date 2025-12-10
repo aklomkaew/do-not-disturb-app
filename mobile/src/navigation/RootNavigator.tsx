@@ -1,4 +1,3 @@
-import { MessagesScreen } from '@/screens/MessagesScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { SwipeScreen } from '@/screens/SwipeScreen';
 import { MatchesScreen } from '@/screens/MatchesScreen';
@@ -6,15 +5,18 @@ import { AdminScreen } from '@/screens/AdminScreen';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { cupidTheme } from '@/constants/theme';
+import { useMatchesCount } from '@/hooks/useMatchesCount';
 
 const Tab = createBottomTabNavigator();
 
 const enableAdminTab = process.env.EXPO_PUBLIC_ENABLE_ADMIN === 'true';
 
 export function RootNavigator() {
+  const matchesCount = useMatchesCount();
+
   return (
     <Tab.Navigator
-      initialRouteName="Swipe"
+      initialRouteName="Explore"
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
@@ -36,9 +38,19 @@ export function RootNavigator() {
         },
       })}
     >
-      <Tab.Screen name="Swipe" component={SwipeScreen} />
-      <Tab.Screen name="Matches" component={MatchesScreen} />
-      <Tab.Screen name="Messages" component={MessagesScreen} />
+      <Tab.Screen name="Explore" component={SwipeScreen} />
+      <Tab.Screen
+        name="Matches"
+        component={MatchesScreen}
+        options={{
+          tabBarBadge: matchesCount > 0 ? (matchesCount > 99 ? '99+' : matchesCount) : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: cupidTheme.colors.accent,
+            color: cupidTheme.colors.surface,
+            fontWeight: '700',
+          },
+        }}
+      />
       <Tab.Screen name="Profile" component={ProfileScreen} />
       {enableAdminTab && <Tab.Screen name="Admin" component={AdminScreen} />}
     </Tab.Navigator>
@@ -47,12 +59,10 @@ export function RootNavigator() {
 
 function iconForRoute(routeName: string): keyof typeof Ionicons.glyphMap {
   switch (routeName) {
-    case 'Swipe':
-      return 'flame-outline';
+    case 'Explore':
+      return 'compass-outline';
     case 'Matches':
       return 'heart-outline';
-    case 'Messages':
-      return 'chatbubble-ellipses-outline';
     case 'Profile':
       return 'person-circle-outline';
     case 'Admin':
