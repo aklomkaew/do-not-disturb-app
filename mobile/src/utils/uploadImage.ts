@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '@/constants/config';
-import * as FileSystem from 'expo-file-system/legacy';
+import { File } from 'expo-file-system';
 
 type UploadResponse = {
   uploadUrl: string;
@@ -33,14 +33,20 @@ export async function uploadImage({ assetUri, accessToken, filename }: UploadIma
   }
 
   const data = (await signed.json()) as UploadResponse;
+  const mimeType = guessMimeType(safeName);
+  const body = await resolveUploadBody(assetUri);
 
-  await FileSystem.uploadAsync(data.uploadUrl, assetUri, {
-    httpMethod: 'PUT',
-    uploadType: 0, // binary content
+  const uploadResponse = await fetch(data.uploadUrl, {
+    method: 'PUT',
     headers: {
-      'Content-Type': guessMimeType(safeName),
+      'Content-Type': mimeType,
     },
+    body,
   });
+
+  if (!uploadResponse.ok) {
+    throw new Error(`Failed to upload image (${uploadResponse.status})`);
+  }
 
   return data.path;
 }
@@ -50,4 +56,25 @@ function guessMimeType(name: string) {
   if (lower.endsWith('.png')) return 'image/png';
   if (lower.endsWith('.webp')) return 'image/webp';
   return 'image/jpeg';
+}
+
+async function resolveUploadBody(uri: string): Promise<Blob> {
+  if (uri.startsWith('file://') || uri.startsWith('content://')) {
+    const file = new File(uri);
+    if (!file.exists) {
+      throw new Error('Selected file could not be found on device.');
+    }
+    return file;
+  }
+
+  const response = await fetch(uri);
+  if (!response.ok) {
+    throw new Error('Unable to read selected file.');
+  }
+
+  const blob = await response.blob();
+  if (!blob || blob.size === 0) {
+    throw new Error('Selected file is empty.');
+  }
+  return blob;
 }
