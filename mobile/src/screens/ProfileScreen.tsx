@@ -119,10 +119,8 @@ export function ProfileScreen() {
   const primaryPhoto = profile?.photos?.[0];
   const secondaryPhotos = profile?.photos?.slice(1) ?? [];
 
-  const greetingName =
-    profile?.displayName ??
-    user?.email?.split('@')[0] ??
-    (user?.phoneNumber ? `User ${user.phoneNumber.slice(-4)}` : 'there');
+  const fallbackId = user?.id ? user.id.slice(0, 4) : '0000';
+  const greetingName = profile?.displayName ?? user?.email?.split('@')[0] ?? `Member ${fallbackId}`;
 
   return (
     <ScreenContainer scrollable={false}>
