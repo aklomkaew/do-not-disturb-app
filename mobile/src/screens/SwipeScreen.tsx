@@ -3,6 +3,7 @@ import { StatusBanner } from '@/components/StatusBanner';
 import { API_BASE_URL } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
+import { refreshMatchesCount } from '@/hooks/useMatchesCount';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -81,6 +82,11 @@ export function SwipeScreen() {
         throw new Error(await extractError(response));
       }
 
+      const data = await response.json();
+      if (direction === 'RIGHT' && data.match && accessToken) {
+        refreshMatchesCount(accessToken);
+      }
+
       setDeck((prev) => {
         const [, ...rest] = prev;
         if (rest.length === 0) {
@@ -111,6 +117,9 @@ export function SwipeScreen() {
       }
 
       fetchDeck();
+      if (accessToken) {
+        refreshMatchesCount(accessToken);
+      }
     } catch (err) {
       Alert.alert('Rewind failed', err instanceof Error ? err.message : 'Unable to rewind right now.');
     } finally {
