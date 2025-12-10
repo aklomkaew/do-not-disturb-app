@@ -12,8 +12,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
 import { PhotoEntry, mergePhotoEntries, partitionSupportedAssets } from '@/utils/photoHelpers';
 import { cupidTheme, cardShadow } from '@/constants/theme';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { updatePreferredName } from '@/hooks/usePreferredName';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'CreateProfile'>;
 type Route = RouteProp<AuthStackParamList, 'CreateProfile'>;
@@ -30,7 +28,7 @@ export function CreateProfileScreen() {
   const [age, setAge] = useState('');
   const [gender, setGender] = useState<typeof genderOptions[number]>('OTHER');
   const [relationshipStatus, setRelationshipStatus] = useState<typeof relationshipOptions[number]>('SINGLE');
-  const [instagramHandle, setInstagramHandle] = useState('');
+  const [location, setLocation] = useState('');
   const [bio, setBio] = useState('');
   const [notifyMatches, setNotifyMatches] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -85,6 +83,10 @@ export function CreateProfileScreen() {
     }
   };
 
+  const handleRemovePhoto = (path: string) => {
+    setPhotos((prev) => prev.filter((photo) => photo.path !== path));
+  };
+
   const handleSubmit = async () => {
     if (displayName.trim().length < 2) {
       setError('Display name must be at least 2 characters');
@@ -118,7 +120,7 @@ export function CreateProfileScreen() {
           age: parsedAge,
           gender,
           relationshipStatus,
-          instagramHandle: instagramHandle.trim().replace(/^@/, '') || null,
+          location: location.trim(),
           bio: bio.trim(),
           matchNotificationsEnabled: notifyMatches,
           media: { photos: photos.map((photo) => photo.path) },
@@ -128,8 +130,6 @@ export function CreateProfileScreen() {
       if (!response.ok) {
         throw new Error(await extractError(response));
       }
-
-      updatePreferredName(displayName.trim());
 
       navigation.reset({
         index: 0,
@@ -150,11 +150,6 @@ export function CreateProfileScreen() {
           <Text style={styles.kicker}>Create your profile</Text>
           <Text style={styles.title}>Tell the community who you are.</Text>
           <Text style={styles.copy}>Thoughtful answers help us match you with people who share your priorities.</Text>
-          <View style={styles.requirements}>
-            <Requirement text="At least one photo" />
-            <Requirement text="Bio with 20+ characters" />
-            <Requirement text="Optional Instagram for deeper context" />
-          </View>
         </View>
 
         <View style={styles.card}>
@@ -207,14 +202,13 @@ export function CreateProfileScreen() {
           <Text style={styles.label}>Relationship status</Text>
           <OptionGroup options={relationshipOptions} value={relationshipStatus} onChange={setRelationshipStatus} disabled={submitting} />
 
-          <Text style={styles.label}>Instagram handle</Text>
+          <Text style={styles.label}>Location</Text>
           <TextInput
             style={styles.input}
-            value={instagramHandle}
-            onChangeText={setInstagramHandle}
-            placeholder="@yourhandle"
+            value={location}
+            onChangeText={setLocation}
+            placeholder="City, Country"
             placeholderTextColor={cupidTheme.colors.textMuted}
-            autoCapitalize="none"
             editable={!submitting}
           />
 
@@ -237,7 +231,7 @@ export function CreateProfileScreen() {
             style={[styles.input, styles.textArea]}
             value={bio}
             onChangeText={setBio}
-            placeholder="Three adjectives, your current obsessions, and why someone should date you."
+            placeholder="Share what makes you tick, your boundaries, or your perfect Do Not Disturb day."
             placeholderTextColor={cupidTheme.colors.textMuted}
             editable={!submitting}
             multiline
@@ -312,10 +306,6 @@ const styles = StyleSheet.create({
   copy: {
     color: cupidTheme.colors.textSecondary,
     lineHeight: 20,
-  },
-  requirements: {
-    marginTop: 8,
-    gap: 6,
   },
   toggleRow: {
     flexDirection: 'row',
@@ -460,27 +450,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 16,
     letterSpacing: 0.4,
-  },
-});
-
-function Requirement({ text }: { text: string }) {
-  return (
-    <View style={requirementStyles.row}>
-      <Ionicons name="checkmark-circle-outline" size={16} color={cupidTheme.colors.accent} />
-      <Text style={requirementStyles.label}>{text}</Text>
-    </View>
-  );
-}
-
-const requirementStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  label: {
-    color: cupidTheme.colors.textSecondary,
-    fontSize: 13,
   },
 });
 

@@ -110,7 +110,7 @@ export function MatchesScreen() {
       <FlatList
         data={matches}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.listContent, matches.length === 0 && styles.emptyContainer]}
+        contentContainerStyle={matches.length === 0 ? [styles.listContent, styles.emptyContainer] : styles.listContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchMatches(true)} tintColor={cupidTheme.colors.accent} />}
         ListHeaderComponent={<MatchesHeader matchCount={matches.length} />}
         renderItem={({ item }) => (
@@ -320,76 +320,6 @@ const styles = StyleSheet.create({
   closeLabel: {
     color: cupidTheme.colors.accent,
     fontWeight: '700',
-  },
-});
-
-function MatchesHeader({ matchCount }: { matchCount: number }) {
-  return (
-    <View style={headerStyles.container}>
-      <View style={{ flex: 1 }}>
-        <Text style={headerStyles.eyebrow}>Connections</Text>
-        <Text style={headerStyles.title}>Your matches</Text>
-        <Text style={headerStyles.copy}>
-          We group compatible profiles and refresh them a few times per week. Check in here for every mutual match and curated intro.
-        </Text>
-      </View>
-      <View style={headerStyles.countPill}>
-        <Text style={headerStyles.count}>{matchCount}</Text>
-        <Text style={headerStyles.countLabel}>Total matches</Text>
-      </View>
-    </View>
-  );
-}
-
-const headerStyles = StyleSheet.create({
-  container: {
-    padding: 20,
-    borderRadius: cupidTheme.radii.xl,
-    backgroundColor: cupidTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: cupidTheme.colors.borderSubtle,
-    flexDirection: 'row',
-    gap: 16,
-    alignItems: 'center',
-    ...cardShadow(),
-  },
-  eyebrow: {
-    color: cupidTheme.colors.accent,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    fontSize: 12,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: cupidTheme.colors.textPrimary,
-  },
-  copy: {
-    color: cupidTheme.colors.textSecondary,
-    lineHeight: 20,
-  },
-  countPill: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: cupidTheme.radii.lg,
-    backgroundColor: cupidTheme.colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: cupidTheme.colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 18,
-    minWidth: 100,
-  },
-  count: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: cupidTheme.colors.textPrimary,
-  },
-  countLabel: {
-    fontSize: 12,
-    color: cupidTheme.colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
 });
 
