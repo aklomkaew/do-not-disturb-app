@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { authGuard } from '../middleware/authGuard';
 import { prisma } from '../services/prisma';
-import { resolvePhotoUrl } from '../services/storage';
+import { resolveMediaPhotos } from '../services/storage';
 
 export const profileRouter = Router();
 
@@ -183,7 +183,6 @@ profileRouter.delete('/me', async (req, res, next) => {
 });
 
 async function withSignedPhotos<T extends { media: any }>(profile: T) {
-  const photos = Array.isArray(profile.media?.photos) ? (profile.media.photos as string[]) : [];
-  const signed = await Promise.all(photos.map((p) => resolvePhotoUrl(p)));
-  return { ...profile, media: { photos: signed } };
+  const { photoPaths, photos } = await resolveMediaPhotos(profile.media);
+  return { ...profile, media: { photos, paths: photoPaths } };
 }

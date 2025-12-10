@@ -1,12 +1,13 @@
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { StatusBanner } from '@/components/StatusBanner';
+import { PhotoCarousel } from '@/components/PhotoCarousel';
 import { API_BASE_URL } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
 import { refreshMatchesCount } from '@/hooks/useMatchesCount';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -21,23 +22,20 @@ type DeckProfile = {
 
 export function SwipeScreen() {
   const health = useHealthCheck();
-  const { accessToken } = useAuth();
+  const { getAccessToken } = useAuth();
   const [deck, setDeck] = useState<DeckProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchDeck = useCallback(async () => {
-    if (!accessToken) {
-      setError('Session expired. Please log in again.');
-      return;
-    }
     try {
       setLoading(true);
       setError(null);
+      const token = await getAccessToken();
       const response = await fetch(`${API_BASE_URL}/api/swipes/deck`, {
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -52,7 +50,7 @@ export function SwipeScreen() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken]);
+  }, [getAccessToken]);
 
   useFocusEffect(
     useCallback(() => {
@@ -63,14 +61,15 @@ export function SwipeScreen() {
   const currentProfile = deck[0];
 
   const handleSwipe = async (direction: 'LEFT' | 'RIGHT') => {
-    if (!currentProfile || !accessToken) return;
+    if (!currentProfile) return;
     try {
       setActionLoading(true);
+      const token = await getAccessToken();
       const response = await fetch(`${API_BASE_URL}/api/swipes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           targetProfileId: currentProfile.id,
@@ -102,13 +101,13 @@ export function SwipeScreen() {
   };
 
   const handleRewind = async () => {
-    if (!accessToken) return;
     try {
       setActionLoading(true);
+      const token = await getAccessToken();
       const response = await fetch(`${API_BASE_URL}/api/swipes/rewind`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -237,35 +236,6 @@ function ProfileCard({
   );
 }
 
-function PhotoCarousel({ photos, width }: { photos: string[]; width: number }) {
-  const [index, setIndex] = useState(0);
-
-  return (
-    <View>
-      <ScrollView
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={(event) => {
-          const offsetX = event.nativeEvent.contentOffset.x;
-          setIndex(Math.round(offsetX / width));
-        }}
-        style={{ width }}
-      >
-        {photos.map((uri) => (
-          <Image key={uri} source={{ uri }} style={[styles.heroImage, { width }]} />
-        ))}
-      </ScrollView>
-      {photos.length > 1 ? (
-        <View style={styles.dots}>
-          {photos.map((_, i) => (
-            <View key={i} style={[styles.dot, i === index && styles.dotActive]} />
-          ))}
-        </View>
-      ) : null}
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   heroCard: {
@@ -334,12 +304,6 @@ const styles = StyleSheet.create({
     fontSize: 26,
     color: cupidTheme.colors.textPrimary,
     fontWeight: '800',
-  },
-  heroImage: {
-    height: 360,
-    borderRadius: cupidTheme.radii.lg,
-    backgroundColor: cupidTheme.colors.surfaceMuted,
-    resizeMode: 'cover',
   },
   photoFallback: {
     height: 360,

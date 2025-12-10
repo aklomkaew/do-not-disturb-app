@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Modal, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
+import { PhotoEntry, hydratePhotoEntries, mergePhotoEntries, partitionSupportedAssets } from '@/utils/photoHelpers';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { updatePreferredName } from '@/hooks/usePreferredName';
@@ -21,7 +22,7 @@ const relationshipOptions = ['SINGLE', 'OPEN', 'COMPLICATED', 'TAKEN'] as const;
 export function ProfileEditorScreen() {
   const navigation = useNavigation<Navigation>();
   const route = useRoute<Route>();
-  const { accessToken } = useAuth();
+  const { getAccessToken } = useAuth();
 
   const [displayName, setDisplayName] = useState(route.params.profile.displayName);
   const [age, setAge] = useState(String(route.params.profile.age ?? ''));
@@ -32,11 +33,14 @@ export function ProfileEditorScreen() {
   const [notifyMatches, setNotifyMatches] = useState(route.params.profile.matchNotificationsEnabled);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [photos, setPhotos] = useState<string[]>(route.params.profile.photos ?? []);
+  const initialPhotos = hydratePhotoEntries(route.params.profile.photoPaths, route.params.profile.photos);
+  const [photos, setPhotos] = useState<PhotoEntry[]>(initialPhotos);
   const [uploading, setUploading] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const pickPhotos = async () => {
+    setError(null);
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       setError('We need access to your photos to upload images.');
@@ -52,17 +56,27 @@ export function ProfileEditorScreen() {
 
     if (result.canceled) return;
 
-    const selected = result.assets?.map((asset) => asset.uri).filter(Boolean) ?? [];
+    const assets = result.assets ?? [];
+    const { supported, rejected } = partitionSupportedAssets(assets);
+    if (rejected.length > 0) {
+      setError(
+        `Skipped ${rejected.length} unsupported file${rejected.length > 1 ? 's' : ''}. Only JPG, JPEG, PNG, and WEBP images are supported.`
+      );
+    }
+
+    const selected = supported.map((asset) => asset.uri).filter(Boolean);
     if (selected.length === 0) return;
 
     try {
       setUploading(true);
-      const uploads = [];
-      for (const uri of selected) {
-        uploads.push(uploadImage(uri));
-      }
-      const uploaded = await Promise.all(uploads);
-      setPhotos((prev) => Array.from(new Set([...prev, ...uploaded])).slice(0, 5));
+      const token = await getAccessToken();
+      const uploaded = await Promise.all(
+        selected.map(async (uri) => {
+          const { path, previewUrl } = await uploadImage({ assetUri: uri, accessToken: token });
+          return { path, url: previewUrl ?? uri };
+        })
+      );
+      setPhotos((prev) => mergePhotoEntries(prev, uploaded));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload photos.');
     } finally {
@@ -70,14 +84,16 @@ export function ProfileEditorScreen() {
     }
   };
 
+  const handleRemovePhoto = (path: string) => {
+    setPhotos((prev) => prev.filter((photo) => photo.path !== path));
+  };
+
   const handleSave = async () => {
     try {
-      if (!accessToken) {
-        throw new Error('Session expired. Please log in again.');
-      }
       setSubmitting(true);
       setError(null);
 
+      const token = await getAccessToken();
       const payload: Record<string, unknown> = {
         displayName: displayName.trim(),
         gender,
@@ -85,7 +101,7 @@ export function ProfileEditorScreen() {
         bio: bio.trim(),
         instagramHandle: instagramHandle.trim().replace(/^@/, '') || null,
         matchNotificationsEnabled: notifyMatches,
-        media: { photos },
+        media: { photos: photos.map((photo) => photo.path) },
       };
 
       if (age.trim().length > 0) {
@@ -96,7 +112,7 @@ export function ProfileEditorScreen() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
@@ -139,9 +155,12 @@ export function ProfileEditorScreen() {
         <Text style={styles.label}>Photos (first is your profile picture)</Text>
         <Text style={styles.helper}>{uploading ? 'Uploading...' : 'Add up to 5 (3 recommended).'}</Text>
         <View style={styles.photoRow}>
-          {photos.map((uri, idx) => (
-            <View key={uri} style={styles.photoItem}>
-              <Image source={{ uri }} style={styles.photo} />
+          {photos.map((photo, idx) => (
+            <View key={photo.path} style={styles.photoItem}>
+              <Image source={{ uri: photo.url ?? photo.path }} style={styles.photo} />
+              <Pressable style={styles.photoRemove} onPress={() => handleRemovePhoto(photo.path)} accessibilityLabel="Remove photo">
+                <Text style={styles.photoRemoveLabel}>×</Text>
+              </Pressable>
               <Text style={styles.photoBadge}>{idx === 0 ? 'Profile' : `#${idx + 1}`}</Text>
             </View>
           ))}
@@ -344,6 +363,24 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: '100%',
+  },
+  photoRemove: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  photoRemoveLabel: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+    lineHeight: 18,
   },
   photoBadge: {
     position: 'absolute',
