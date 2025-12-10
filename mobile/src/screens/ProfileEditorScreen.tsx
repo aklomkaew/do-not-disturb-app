@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
 import { cupidTheme, cardShadow } from '@/constants/theme';
@@ -111,6 +111,13 @@ export function ProfileEditorScreen() {
     }
   };
 
+  const confirmCancel = () => {
+    Alert.alert('Discard changes?', 'If you go back now, your edits will be lost.', [
+      { text: 'Keep editing', style: 'cancel' },
+      { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
+    ]);
+  };
+
   return (
     <ScreenContainer scrollable={false}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -162,7 +169,7 @@ export function ProfileEditorScreen() {
         <Text style={styles.label}>Relationship status</Text>
         <OptionGroup options={relationshipOptions} value={relationshipStatus} onChange={setRelationshipStatus} />
 
-        <Text style={styles.label}>Instagram handle (optional)</Text>
+        <Text style={styles.label}>Instagram handle</Text>
         <TextInput
           style={styles.input}
           value={instagramHandle}
@@ -199,9 +206,14 @@ export function ProfileEditorScreen() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Pressable style={[styles.button, submitting && styles.buttonDisabled]} onPress={handleSave} disabled={submitting}>
-          {submitting ? <ActivityIndicator color={cupidTheme.colors.surface} /> : <Text style={styles.buttonLabel}>Save changes</Text>}
-        </Pressable>
+        <View style={styles.buttonRow}>
+          <Pressable style={styles.cancelButton} onPress={confirmCancel} disabled={submitting}>
+            <Text style={styles.cancelLabel}>Cancel</Text>
+          </Pressable>
+          <Pressable style={[styles.button, submitting && styles.buttonDisabled]} onPress={handleSave} disabled={submitting}>
+            {submitting ? <ActivityIndicator color={cupidTheme.colors.surface} /> : <Text style={styles.buttonLabel}>Save changes</Text>}
+          </Pressable>
+        </View>
       </ScrollView>
     </ScreenContainer>
   );
@@ -364,8 +376,26 @@ const styles = StyleSheet.create({
   error: {
     color: cupidTheme.colors.error,
   },
-  button: {
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
     marginTop: 16,
+  },
+  cancelButton: {
+    flex: 1,
+    borderRadius: cupidTheme.radii.lg,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.border,
+    paddingVertical: 16,
+    alignItems: 'center',
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+  },
+  cancelLabel: {
+    color: cupidTheme.colors.textSecondary,
+    fontWeight: '700',
+  },
+  button: {
+    flex: 1,
     backgroundColor: cupidTheme.colors.accent,
     borderRadius: cupidTheme.radii.lg,
     paddingVertical: 16,

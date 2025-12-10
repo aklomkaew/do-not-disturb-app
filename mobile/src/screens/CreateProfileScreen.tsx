@@ -189,7 +189,7 @@ export function CreateProfileScreen() {
           <Text style={styles.label}>Relationship status</Text>
           <OptionGroup options={relationshipOptions} value={relationshipStatus} onChange={setRelationshipStatus} disabled={submitting} />
 
-          <Text style={styles.label}>Instagram handle (optional)</Text>
+          <Text style={styles.label}>Instagram handle</Text>
           <TextInput
             style={styles.input}
             value={instagramHandle}
