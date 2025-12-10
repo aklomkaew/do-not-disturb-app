@@ -12,6 +12,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { updatePreferredName } from '@/hooks/usePreferredName';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'CreateProfile'>;
 type Route = RouteProp<AuthStackParamList, 'CreateProfile'>;
@@ -43,11 +44,6 @@ export function CreateProfileScreen() {
       return;
     }
 
-    if (!accessToken) {
-      setError('Session expired. Please log in again.');
-      return;
-    }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
@@ -62,7 +58,11 @@ export function CreateProfileScreen() {
 
     try {
       setUploading(true);
-      const uploaded = await Promise.all(selected.map((uri) => uploadImage({ assetUri: uri, accessToken })));
+      const uploads = [];
+      for (const uri of selected) {
+        uploads.push(uploadImage(uri));
+      }
+      const uploaded = await Promise.all(uploads);
       setPhotos((prev) => Array.from(new Set([...prev, ...uploaded])).slice(0, 5));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload photos.');
@@ -116,6 +116,8 @@ export function CreateProfileScreen() {
       if (!response.ok) {
         throw new Error(await extractError(response));
       }
+
+      updatePreferredName(displayName.trim());
 
       navigation.reset({
         index: 0,

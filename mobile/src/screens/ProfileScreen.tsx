@@ -4,10 +4,11 @@ import type { AuthStackParamList } from '@/navigation/AuthenticatedNavigator';
 import { useAuth } from '@/hooks/useAuth';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { usePreferredName } from '@/hooks/usePreferredName';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -119,13 +120,21 @@ export function ProfileScreen() {
   const primaryPhoto = profile?.photos?.[0];
   const secondaryPhotos = profile?.photos?.slice(1) ?? [];
 
+  const preferredName = usePreferredName();
+  const greetingName = useMemo(() => {
+    if (profile?.displayName) return profile.displayName;
+    if (preferredName) return preferredName;
+    if (user?.email) return user.email.split('@')[0];
+    return user?.id ? `Member ${user.id.slice(0, 4)}` : 'Friend';
+  }, [preferredName, profile?.displayName, user?.email, user?.id]);
+
   return (
     <ScreenContainer scrollable={false}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.card}>
           {primaryPhoto ? <Image source={{ uri: primaryPhoto }} style={styles.heroImage} /> : null}
           <Text style={styles.heading}>Profile & Settings</Text>
-          <Text style={styles.copy}>You are signed in as {user?.email ?? user?.phoneNumber ?? 'unknown user'}.</Text>
+          <Text style={styles.greeting}>Hello {greetingName}</Text>
 
           {status === 'loading' ? (
             <ActivityIndicator color={cupidTheme.colors.accent} style={{ marginTop: 16 }} />
@@ -205,6 +214,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: cupidTheme.colors.textPrimary,
     fontWeight: '800',
+  },
+  greeting: {
+    color: cupidTheme.colors.textSecondary,
+    fontSize: 16,
+    marginTop: 2,
   },
   heroImage: {
     width: '100%',

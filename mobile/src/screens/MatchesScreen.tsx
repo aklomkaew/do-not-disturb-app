@@ -132,7 +132,7 @@ export function MatchesScreen() {
           <View style={styles.stateCard}>
             <Ionicons name="heart-outline" size={28} color={cupidTheme.colors.accent} />
             <Text style={styles.heading}>No matches yet</Text>
-            <Text style={styles.copy}>Keep swiping and we’ll drop new matches here.</Text>
+            <Text style={styles.copy}>Keep exploring and we’ll drop new matches here.</Text>
             <Text style={styles.copy}>We refresh your deck multiple times a week during beta.</Text>
           </View>
         }

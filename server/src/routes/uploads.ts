@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { authGuard } from '../middleware/authGuard';
-import { createSignedUpload } from '../services/storage';
+import { createSignedUpload, resolvePhotoUrl } from '../services/storage';
 import crypto from 'crypto';
 
 export const uploadsRouter = Router();
@@ -10,6 +10,10 @@ uploadsRouter.use(authGuard);
 
 const payloadSchema = z.object({
   filename: z.string().min(1),
+});
+
+const previewSchema = z.object({
+  path: z.string().min(1),
 });
 
 uploadsRouter.post('/profile-photo-url', async (req, res, next) => {
@@ -28,6 +32,25 @@ uploadsRouter.post('/profile-photo-url', async (req, res, next) => {
     const { uploadUrl } = await createSignedUpload(path);
 
     res.json({ uploadUrl, path });
+  } catch (error) {
+    next(error);
+  }
+});
+
+uploadsRouter.post('/profile-photo-preview', async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const { path } = previewSchema.parse(req.body);
+    if (!path.startsWith(`${userId}/`)) {
+      return res.status(403).json({ message: 'Cannot preview another user\'s media' });
+    }
+
+    const url = await resolvePhotoUrl(path);
+    res.json({ url });
   } catch (error) {
     next(error);
   }

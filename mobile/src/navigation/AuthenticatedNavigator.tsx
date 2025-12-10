@@ -22,6 +22,7 @@ export type ProfilePayload = {
   instagramHandle: string | null;
   matchNotificationsEnabled: boolean;
   photos: string[];
+  photoPaths: string[];
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();

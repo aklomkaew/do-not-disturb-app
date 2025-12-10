@@ -6,13 +6,18 @@ type UploadResponse = {
   path: string;
 };
 
+type UploadResult = {
+  path: string;
+  previewUrl: string;
+};
+
 type UploadImageParams = {
   assetUri: string;
   accessToken: string | null;
   filename?: string;
 };
 
-export async function uploadImage({ assetUri, accessToken, filename }: UploadImageParams): Promise<string> {
+export async function uploadImage({ assetUri, accessToken, filename }: UploadImageParams): Promise<UploadResult> {
   if (!accessToken) {
     throw new Error('Session expired. Please log in again.');
   }
@@ -48,7 +53,8 @@ export async function uploadImage({ assetUri, accessToken, filename }: UploadIma
     throw new Error(`Failed to upload image (${uploadResponse.status})`);
   }
 
-  return data.path;
+  const previewUrl = await requestPhotoPreview(data.path, accessToken);
+  return { path: data.path, previewUrl };
 }
 
 function guessMimeType(name: string) {
@@ -77,4 +83,31 @@ async function resolveUploadBody(uri: string): Promise<Blob> {
     throw new Error('Selected file is empty.');
   }
   return blob;
+}
+
+async function requestPhotoPreview(path: string, accessToken: string) {
+  const response = await fetch(`${API_BASE_URL}/api/uploads/profile-photo-preview`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ path }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await extractError(response));
+  }
+
+  const data = (await response.json()) as { url: string };
+  return data.url;
+}
+
+async function extractError(response: Response) {
+  try {
+    const data = await response.json();
+    return data?.message ?? data?.error?.message ?? 'Upload failed';
+  } catch {
+    return response.statusText || 'Upload failed';
+  }
 }

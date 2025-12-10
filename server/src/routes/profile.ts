@@ -185,5 +185,5 @@ profileRouter.delete('/me', async (req, res, next) => {
 async function withSignedPhotos<T extends { media: any }>(profile: T) {
   const photos = Array.isArray(profile.media?.photos) ? (profile.media.photos as string[]) : [];
   const signed = await Promise.all(photos.map((p) => resolvePhotoUrl(p)));
-  return { ...profile, media: { photos: signed } };
+  return { ...profile, media: { photos: signed, paths: photos } };
 }

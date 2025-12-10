@@ -89,7 +89,7 @@ export function SwipeScreen() {
         return rest;
       });
     } catch (err) {
-      Alert.alert('Swipe failed', err instanceof Error ? err.message : 'Unable to swipe right now.');
+      Alert.alert('Action failed', err instanceof Error ? err.message : 'Unable to explore right now.');
     } finally {
       setActionLoading(false);
     }
@@ -121,6 +121,13 @@ export function SwipeScreen() {
   return (
     <ScreenContainer>
       <StatusBanner status={health.status} timestamp={health.timestamp} />
+      <View style={styles.heroCard}>
+        <Ionicons name="compass-outline" size={22} color={cupidTheme.colors.accent} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.heroTitle}>Explore queue</Text>
+          <Text style={styles.heroCopy}>Discover intentional matches one curated card at a time.</Text>
+        </View>
+      </View>
       {loading ? (
         <View style={styles.stateCard}>
           <ActivityIndicator color={cupidTheme.colors.accent} />
@@ -218,7 +225,7 @@ function ProfileCard({
 
       <Pressable style={styles.rewindButton} onPress={onRewind} disabled={actionLoading}>
         <Ionicons name="play-back" size={18} color={cupidTheme.colors.accentSecondary} />
-        <Text style={styles.rewindLabel}>Rewind last swipe</Text>
+        <Text style={styles.rewindLabel}>Rewind last pick</Text>
       </Pressable>
     </View>
   );
@@ -255,6 +262,27 @@ function PhotoCarousel({ photos, width }: { photos: string[]; width: number }) {
 }
 
 const styles = StyleSheet.create({
+  heroCard: {
+    marginBottom: 16,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+    ...cardShadow(),
+  },
+  heroTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: cupidTheme.colors.textPrimary,
+  },
+  heroCopy: {
+    color: cupidTheme.colors.textSecondary,
+    fontSize: 13,
+  },
   stateCard: {
     padding: 22,
     borderRadius: cupidTheme.radii.lg,

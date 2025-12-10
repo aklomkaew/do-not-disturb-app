@@ -3,6 +3,7 @@ import { ScrollView, StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewSt
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/hooks/useAuth';
 import { cupidTheme } from '@/constants/theme';
+import { usePreferredName } from '@/hooks/usePreferredName';
 
 interface ScreenContainerProps {
   children: ReactNode;
@@ -12,24 +13,32 @@ interface ScreenContainerProps {
 
 export function ScreenContainer({ children, scrollable = true, contentContainerStyle }: ScreenContainerProps) {
   const { status, logout, user } = useAuth();
+  const preferredName = usePreferredName();
 
   const userLabel = useMemo(() => {
     if (!user) return 'Guest';
+    if (preferredName) return preferredName;
     if (user.email) return user.email;
-    if (user.phoneNumber) return user.phoneNumber;
-    return `User ${user.id.slice(0, 6)}`;
-  }, [user]);
+    return `Member ${user.id.slice(0, 6)}`;
+  }, [preferredName, user]);
 
   const initials = useMemo(() => {
-    if (!user) return 'DN';
-    if (user.email) {
+    if (preferredName) {
+      return preferredName
+        .split(' ')
+        .map((chunk) => chunk[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
+    }
+    if (user?.email) {
       return user.email.slice(0, 2).toUpperCase();
     }
-    if (user.phoneNumber) {
-      return user.phoneNumber.replace(/\D/g, '').slice(-2).padStart(2, '0');
+    if (user?.id) {
+      return user.id.slice(0, 2).toUpperCase();
     }
-    return user.id.slice(0, 2).toUpperCase();
-  }, [user]);
+    return 'DN';
+  }, [preferredName, user]);
 
   const content = (
     <View style={[styles.content, !scrollable && styles.contentPadded]}>
