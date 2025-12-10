@@ -22,6 +22,7 @@ export type ProfilePayload = {
   location: string | null;
   matchNotificationsEnabled: boolean;
   photos: string[];
+  photoPaths: string[];
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();

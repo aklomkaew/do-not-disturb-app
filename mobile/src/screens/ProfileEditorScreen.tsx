@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
+import { PhotoEntry, hydratePhotoEntries, mergePhotoEntries } from '@/utils/photoHelpers';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'ProfileEditor'>;
@@ -19,7 +20,7 @@ const relationshipOptions = ['SINGLE', 'OPEN', 'COMPLICATED', 'TAKEN'] as const;
 export function ProfileEditorScreen() {
   const navigation = useNavigation<Navigation>();
   const route = useRoute<Route>();
-  const { accessToken } = useAuth();
+  const { getAccessToken } = useAuth();
 
   const [displayName, setDisplayName] = useState(route.params.profile.displayName);
   const [age, setAge] = useState(String(route.params.profile.age ?? ''));
@@ -30,18 +31,14 @@ export function ProfileEditorScreen() {
   const [notifyMatches, setNotifyMatches] = useState(route.params.profile.matchNotificationsEnabled);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [photos, setPhotos] = useState<string[]>(route.params.profile.photos ?? []);
+  const initialPhotos = hydratePhotoEntries(route.params.profile.photoPaths, route.params.profile.photos);
+  const [photos, setPhotos] = useState<PhotoEntry[]>(initialPhotos);
   const [uploading, setUploading] = useState(false);
 
   const pickPhotos = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       setError('We need access to your photos to upload images.');
-      return;
-    }
-
-    if (!accessToken) {
-      setError('Session expired. Please log in again.');
       return;
     }
 
@@ -59,8 +56,10 @@ export function ProfileEditorScreen() {
 
     try {
       setUploading(true);
-      const uploaded = await Promise.all(selected.map((uri) => uploadImage({ assetUri: uri, accessToken })));
-      setPhotos((prev) => Array.from(new Set([...prev, ...uploaded])).slice(0, 5));
+      const token = await getAccessToken();
+      const uploaded = await Promise.all(selected.map((uri) => uploadImage({ assetUri: uri, accessToken: token })));
+      const entries = uploaded.map(({ path, previewUrl }) => ({ path, url: previewUrl }));
+      setPhotos((prev) => mergePhotoEntries(prev, entries));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload photos.');
     } finally {
@@ -70,12 +69,10 @@ export function ProfileEditorScreen() {
 
   const handleSave = async () => {
     try {
-      if (!accessToken) {
-        throw new Error('Session expired. Please log in again.');
-      }
       setSubmitting(true);
       setError(null);
 
+      const token = await getAccessToken();
       const payload: Record<string, unknown> = {
         displayName: displayName.trim(),
         gender,
@@ -83,7 +80,7 @@ export function ProfileEditorScreen() {
         bio: bio.trim(),
         location: location.trim(),
         matchNotificationsEnabled: notifyMatches,
-        media: { photos },
+        media: { photos: photos.map((photo) => photo.path) },
       };
 
       if (age.trim().length > 0) {
@@ -94,7 +91,7 @@ export function ProfileEditorScreen() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
@@ -120,9 +117,9 @@ export function ProfileEditorScreen() {
         <Text style={styles.label}>Photos (first is your profile picture)</Text>
         <Text style={styles.helper}>{uploading ? 'Uploading...' : 'Add up to 5 (3 recommended).'}</Text>
         <View style={styles.photoRow}>
-          {photos.map((uri, idx) => (
-            <View key={uri} style={styles.photoItem}>
-              <Image source={{ uri }} style={styles.photo} />
+          {photos.map((photo, idx) => (
+            <View key={photo.path} style={styles.photoItem}>
+              <Image source={{ uri: photo.url }} style={styles.photo} />
               <Text style={styles.photoBadge}>{idx === 0 ? 'Profile' : `#${idx + 1}`}</Text>
             </View>
           ))}

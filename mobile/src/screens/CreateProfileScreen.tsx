@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
+import { PhotoEntry, mergePhotoEntries } from '@/utils/photoHelpers';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'CreateProfile'>;
@@ -22,7 +23,7 @@ export function CreateProfileScreen() {
   const navigation = useNavigation<Navigation>();
   const route = useRoute<Route>();
   const { status, timestamp } = useHealthCheck();
-  const { accessToken } = useAuth();
+  const { getAccessToken } = useAuth();
   const [displayName, setDisplayName] = useState(route.params.initialDisplayName);
   const [age, setAge] = useState('');
   const [gender, setGender] = useState<typeof genderOptions[number]>('OTHER');
@@ -32,18 +33,13 @@ export function CreateProfileScreen() {
   const [notifyMatches, setNotifyMatches] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<PhotoEntry[]>([]);
   const [uploading, setUploading] = useState(false);
 
   const pickPhotos = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       setError('We need access to your photos to upload images.');
-      return;
-    }
-
-    if (!accessToken) {
-      setError('Session expired. Please log in again.');
       return;
     }
 
@@ -61,8 +57,10 @@ export function CreateProfileScreen() {
 
     try {
       setUploading(true);
-      const uploaded = await Promise.all(selected.map((uri) => uploadImage({ assetUri: uri, accessToken })));
-      setPhotos((prev) => Array.from(new Set([...prev, ...uploaded])).slice(0, 5));
+      const token = await getAccessToken();
+      const uploaded = await Promise.all(selected.map((uri) => uploadImage({ assetUri: uri, accessToken: token })));
+      const entries = uploaded.map(({ path, previewUrl }) => ({ path, url: previewUrl }));
+      setPhotos((prev) => mergePhotoEntries(prev, entries));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload photos.');
     } finally {
@@ -88,17 +86,15 @@ export function CreateProfileScreen() {
     }
 
     try {
-      if (!accessToken) {
-        throw new Error('Session expired. Please log in again.');
-      }
       setSubmitting(true);
       setError(null);
 
+      const token = await getAccessToken();
       const response = await fetch(`${API_BASE_URL}/api/profile/bootstrap`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           displayName: displayName.trim(),
@@ -108,7 +104,7 @@ export function CreateProfileScreen() {
           location: location.trim(),
           bio: bio.trim(),
           matchNotificationsEnabled: notifyMatches,
-          media: { photos },
+          media: { photos: photos.map((photo) => photo.path) },
         }),
       });
 
@@ -141,9 +137,9 @@ export function CreateProfileScreen() {
           <Text style={styles.label}>Photos (first is your profile picture)</Text>
           <Text style={styles.helper}>{uploading ? 'Uploading...' : 'Add up to 5 (3 recommended).'}</Text>
           <View style={styles.photoRow}>
-            {photos.map((uri, idx) => (
-              <View key={uri} style={styles.photoItem}>
-                <Image source={{ uri }} style={styles.photo} />
+            {photos.map((photo, idx) => (
+              <View key={photo.path} style={styles.photoItem}>
+                <Image source={{ uri: photo.url }} style={styles.photo} />
                 <Text style={styles.photoBadge}>{idx === 0 ? 'Profile' : `#${idx + 1}`}</Text>
               </View>
             ))}

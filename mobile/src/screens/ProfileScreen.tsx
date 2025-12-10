@@ -19,10 +19,11 @@ type ProfileResponse = {
   location: string | null;
   matchNotificationsEnabled: boolean;
   photos: string[];
+  photoPaths: string[];
 };
 
 export function ProfileScreen() {
-  const { user, accessToken, logout } = useAuth();
+  const { user, logout, getAccessToken } = useAuth();
   const navigation = useNavigation<Navigation>();
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -30,18 +31,13 @@ export function ProfileScreen() {
   const [deleting, setDeleting] = useState(false);
 
   const fetchProfile = useCallback(async () => {
-    if (!accessToken) {
-      setStatus('error');
-      setError('Session expired. Please log in again.');
-      return;
-    }
-
     try {
       setStatus('loading');
       setError(null);
+      const token = await getAccessToken();
       const response = await fetch(`${API_BASE_URL}/api/profile/me`, {
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -59,6 +55,7 @@ export function ProfileScreen() {
         location: data.profile.location,
         matchNotificationsEnabled: data.profile.matchNotificationsEnabled ?? true,
         photos: data.profile.media?.photos ?? [],
+        photoPaths: data.profile.media?.paths ?? [],
       };
 
       setProfile(normalized);
@@ -67,7 +64,7 @@ export function ProfileScreen() {
       setStatus('error');
       setError(err instanceof Error ? err.message : 'Failed to load profile');
     }
-  }, [accessToken]);
+  }, [getAccessToken]);
 
   useFocusEffect(
     useCallback(() => {
@@ -88,18 +85,13 @@ export function ProfileScreen() {
   };
 
   const deleteAccount = async () => {
-    if (!accessToken) {
-      Alert.alert('Delete account', 'Session expired. Please log in again.');
-      await logout().catch(() => undefined);
-      return;
-    }
-
     try {
       setDeleting(true);
+      const token = await getAccessToken();
       const response = await fetch(`${API_BASE_URL}/api/profile/me`, {
         method: 'DELETE',
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -110,6 +102,9 @@ export function ProfileScreen() {
       await logout();
     } catch (err) {
       Alert.alert('Delete failed', err instanceof Error ? err.message : 'Unable to delete the account right now.');
+      if (err instanceof Error && err.message.toLowerCase().includes('session')) {
+        await logout().catch(() => undefined);
+      }
     } finally {
       setDeleting(false);
     }

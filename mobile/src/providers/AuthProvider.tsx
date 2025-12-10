@@ -46,6 +46,7 @@ type AuthContextValue = AuthState & {
   verifyLoginCode: (payload: VerifyCodePayload) => Promise<void>;
   refreshSession: () => Promise<void>;
   logout: () => Promise<void>;
+  getAccessToken: () => Promise<string>;
 };
 
 const SESSION_KEY = 'do-not-disturb-session';
@@ -105,8 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessToken: data.accessToken,
       refreshToken: data.refreshToken,
     });
-
-    console.log('[AuthDebug] accessToken (temp log)', data.accessToken);
+    return data.accessToken as string;
   }, []);
 
   const requestLoginCode = useCallback(async (payload: RequestCodePayload) => {
@@ -144,8 +144,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
       });
-
-      console.log('[AuthDebug] accessToken (temp log)', data.accessToken);
     },
     []
   );
@@ -156,6 +154,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     await refreshWithToken(state.refreshToken);
   }, [refreshWithToken, state.refreshToken]);
+
+  const getAccessToken = useCallback(async () => {
+    if (state.accessToken) {
+      return state.accessToken;
+    }
+    if (!state.refreshToken) {
+      throw new Error('Session expired. Please log in again.');
+    }
+    return refreshWithToken(state.refreshToken);
+  }, [refreshWithToken, state.accessToken, state.refreshToken]);
 
   const logout = useCallback(async () => {
     const refreshToken = state.refreshToken;
@@ -193,8 +201,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyLoginCode,
       refreshSession,
       logout,
+      getAccessToken,
     }),
-    [logout, refreshSession, requestLoginCode, state, verifyLoginCode]
+    [getAccessToken, logout, refreshSession, requestLoginCode, state, verifyLoginCode]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
