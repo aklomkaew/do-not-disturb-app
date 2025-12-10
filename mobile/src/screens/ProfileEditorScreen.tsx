@@ -27,7 +27,7 @@ export function ProfileEditorScreen() {
   const [gender, setGender] = useState(route.params.profile.gender);
   const [relationshipStatus, setRelationshipStatus] = useState(route.params.profile.relationshipStatus);
   const [bio, setBio] = useState(route.params.profile.bio ?? '');
-  const [location, setLocation] = useState(route.params.profile.location ?? '');
+  const [instagramHandle, setInstagramHandle] = useState(route.params.profile.instagramHandle ?? '');
   const [notifyMatches, setNotifyMatches] = useState(route.params.profile.matchNotificationsEnabled);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +81,7 @@ export function ProfileEditorScreen() {
         gender,
         relationshipStatus,
         bio: bio.trim(),
-        location: location.trim(),
+        instagramHandle: instagramHandle.trim().replace(/^@/, '') || null,
         matchNotificationsEnabled: notifyMatches,
         media: { photos },
       };
@@ -162,13 +162,14 @@ export function ProfileEditorScreen() {
         <Text style={styles.label}>Relationship status</Text>
         <OptionGroup options={relationshipOptions} value={relationshipStatus} onChange={setRelationshipStatus} />
 
-        <Text style={styles.label}>Location</Text>
+        <Text style={styles.label}>Instagram handle (optional)</Text>
         <TextInput
           style={styles.input}
-          value={location}
-          onChangeText={setLocation}
-          placeholder="City, Country"
+          value={instagramHandle}
+          onChangeText={setInstagramHandle}
+          placeholder="@yourhandle"
           placeholderTextColor={cupidTheme.colors.textMuted}
+          autoCapitalize="none"
         />
 
         <Text style={styles.label}>Bio</Text>
@@ -176,7 +177,7 @@ export function ProfileEditorScreen() {
           style={[styles.input, styles.textArea]}
           value={bio}
           onChangeText={setBio}
-          placeholder="Share a little about yourself"
+          placeholder="Three adjectives, your interests, and why someone should date you."
           placeholderTextColor={cupidTheme.colors.textMuted}
           multiline
           numberOfLines={4}

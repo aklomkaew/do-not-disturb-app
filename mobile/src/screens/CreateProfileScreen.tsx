@@ -28,7 +28,7 @@ export function CreateProfileScreen() {
   const [age, setAge] = useState('');
   const [gender, setGender] = useState<typeof genderOptions[number]>('OTHER');
   const [relationshipStatus, setRelationshipStatus] = useState<typeof relationshipOptions[number]>('SINGLE');
-  const [location, setLocation] = useState('');
+  const [instagramHandle, setInstagramHandle] = useState('');
   const [bio, setBio] = useState('');
   const [notifyMatches, setNotifyMatches] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -105,7 +105,7 @@ export function CreateProfileScreen() {
           age: parsedAge,
           gender,
           relationshipStatus,
-          location: location.trim(),
+          instagramHandle: instagramHandle.trim().replace(/^@/, '') || null,
           bio: bio.trim(),
           matchNotificationsEnabled: notifyMatches,
           media: { photos },
@@ -138,7 +138,7 @@ export function CreateProfileScreen() {
           <View style={styles.requirements}>
             <Requirement text="At least one photo" />
             <Requirement text="Bio with 20+ characters" />
-            <Requirement text="Location or timezone" />
+            <Requirement text="Optional Instagram for deeper context" />
           </View>
         </View>
 
@@ -189,13 +189,14 @@ export function CreateProfileScreen() {
           <Text style={styles.label}>Relationship status</Text>
           <OptionGroup options={relationshipOptions} value={relationshipStatus} onChange={setRelationshipStatus} disabled={submitting} />
 
-          <Text style={styles.label}>Location</Text>
+          <Text style={styles.label}>Instagram handle (optional)</Text>
           <TextInput
             style={styles.input}
-            value={location}
-            onChangeText={setLocation}
-            placeholder="City, Country"
+            value={instagramHandle}
+            onChangeText={setInstagramHandle}
+            placeholder="@yourhandle"
             placeholderTextColor={cupidTheme.colors.textMuted}
+            autoCapitalize="none"
             editable={!submitting}
           />
 
@@ -218,7 +219,7 @@ export function CreateProfileScreen() {
             style={[styles.input, styles.textArea]}
             value={bio}
             onChangeText={setBio}
-            placeholder="Share what makes you tick, your boundaries, or your perfect Do Not Disturb day."
+            placeholder="Three adjectives, your current obsessions, and why someone should date you."
             placeholderTextColor={cupidTheme.colors.textMuted}
             editable={!submitting}
             multiline

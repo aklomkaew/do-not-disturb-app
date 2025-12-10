@@ -17,7 +17,7 @@ type ProfileResponse = {
   gender: string;
   relationshipStatus: string;
   bio: string;
-  location: string | null;
+  instagramHandle: string | null;
   matchNotificationsEnabled: boolean;
   photos: string[];
 };
@@ -57,7 +57,7 @@ export function ProfileScreen() {
         gender: data.profile.gender,
         relationshipStatus: data.profile.relationshipStatus,
         bio: data.profile.bio,
-        location: data.profile.location,
+        instagramHandle: data.profile.instagramHandle ?? null,
         matchNotificationsEnabled: data.profile.matchNotificationsEnabled ?? true,
         photos: data.profile.media?.photos ?? [],
       };
@@ -126,11 +126,6 @@ export function ProfileScreen() {
           {primaryPhoto ? <Image source={{ uri: primaryPhoto }} style={styles.heroImage} /> : null}
           <Text style={styles.heading}>Profile & Settings</Text>
           <Text style={styles.copy}>You are signed in as {user?.email ?? user?.phoneNumber ?? 'unknown user'}.</Text>
-          <View style={styles.accountPills}>
-            <AccountPill icon="shield-checkmark-outline" label={`Role · ${user?.role ?? 'USER'}`} highlight />
-            <AccountPill icon="checkmark-done-outline" label={user?.allowlisted ? 'Allowlisted access' : 'Awaiting allowlist'} />
-            <AccountPill icon="notifications-outline" label={profile?.matchNotificationsEnabled ? 'Notifications on' : 'Notifications off'} />
-          </View>
 
           {status === 'loading' ? (
             <ActivityIndicator color={cupidTheme.colors.accent} style={{ marginTop: 16 }} />
@@ -147,7 +142,8 @@ export function ProfileScreen() {
               <Detail label="Age" value={String(profile.age)} />
               <Detail label="Gender" value={formatLabel(profile.gender)} />
               <Detail label="Relationship status" value={formatLabel(profile.relationshipStatus)} />
-              <Detail label="Location" value={profile.location ?? 'Not set'} />
+              <Detail label="Instagram" value={profile.instagramHandle ? `@${profile.instagramHandle.replace(/^@/, '')}` : 'Not provided'} />
+              <Detail label="Match notifications" value={profile.matchNotificationsEnabled ? 'Enabled' : 'Disabled'} />
               <View style={styles.bioBlock}>
                 <Text style={styles.metaLabel}>Bio</Text>
                 <Text style={styles.bio}>{profile.bio}</Text>
@@ -161,15 +157,6 @@ export function ProfileScreen() {
               ) : null}
             </View>
           ) : null}
-
-          <View style={styles.meta}>
-            <Text style={styles.metaLabel}>Account ID</Text>
-            <Text style={styles.metaValue}>{user?.id}</Text>
-            <Text style={styles.metaLabel}>Role</Text>
-            <Text style={styles.metaValue}>{user?.role ?? 'USER'}</Text>
-            <Text style={styles.metaLabel}>Allowlisted</Text>
-            <Text style={styles.metaValue}>{user?.allowlisted ? 'Yes' : 'No'}</Text>
-          </View>
 
           <View style={styles.actions}>
             <Pressable style={styles.secondaryButton} onPress={handleEdit} disabled={!profile}>
@@ -230,21 +217,11 @@ const styles = StyleSheet.create({
     color: cupidTheme.colors.textSecondary,
     fontSize: 15,
   },
-  accountPills: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-  },
   details: {
     marginTop: 10,
     gap: 10,
   },
   detailRow: {
-    gap: 4,
-  },
-  meta: {
-    marginTop: 16,
     gap: 4,
   },
   metaLabel: {
@@ -337,24 +314,6 @@ function AccountPill({ icon, label, highlight }: { icon: keyof typeof Ionicons.g
     </View>
   );
 }
-
-const pillStyles = StyleSheet.create({
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: cupidTheme.radii.pill,
-    borderWidth: 1,
-    borderColor: cupidTheme.colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  label: {
-    fontSize: 12,
-    color: cupidTheme.colors.textMuted,
-    fontWeight: '700',
-  },
-});
 
 async function extractError(response: Response) {
   try {
