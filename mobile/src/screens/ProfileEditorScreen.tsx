@@ -67,6 +67,10 @@ export function ProfileEditorScreen() {
     }
   };
 
+  const handleRemovePhoto = (path: string) => {
+    setPhotos((prev) => prev.filter((photo) => photo.path !== path));
+  };
+
   const handleSave = async () => {
     try {
       setSubmitting(true);
@@ -120,6 +124,9 @@ export function ProfileEditorScreen() {
           {photos.map((photo, idx) => (
             <View key={photo.path} style={styles.photoItem}>
               <Image source={{ uri: photo.url }} style={styles.photo} />
+              <Pressable style={styles.photoRemove} onPress={() => handleRemovePhoto(photo.path)}>
+                <Text style={styles.photoRemoveLabel}>×</Text>
+              </Pressable>
               <Text style={styles.photoBadge}>{idx === 0 ? 'Profile' : `#${idx + 1}`}</Text>
             </View>
           ))}
@@ -285,6 +292,24 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: '100%',
+  },
+  photoRemove: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  photoRemoveLabel: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+    lineHeight: 18,
   },
   photoBadge: {
     position: 'absolute',

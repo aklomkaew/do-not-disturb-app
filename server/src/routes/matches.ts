@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authGuard } from '../middleware/authGuard';
 import { prisma } from '../services/prisma';
 import { requireProfile } from '../utils/profile';
-import { resolvePhotoUrl } from '../services/storage';
+import { resolveMediaPhotos } from '../services/storage';
 
 export const matchesRouter = Router();
 
@@ -25,25 +25,28 @@ matchesRouter.get('/', async (req, res, next) => {
       },
     });
 
-    const serialized = await Promise.all(matches.map(async (match) => {
-      const isA = match.profileAId === profile.id;
-      const partner = isA ? match.profileB : match.profileA;
-      const photos = await extractPhotos(partner.media);
+    const serialized = await Promise.all(
+      matches.map(async (match) => {
+        const isA = match.profileAId === profile.id;
+        const partner = isA ? match.profileB : match.profileA;
+        const { photos, photoPaths } = await resolveMediaPhotos(partner.media);
 
-      return {
-        id: match.id,
-        createdAt: match.createdAt,
-        lastInteractionAt: match.lastInteractionAt,
-        partner: {
-          id: partner.id,
-          displayName: partner.displayName,
-          age: partner.age,
-          location: partner.location,
-          bio: partner.bio,
-          photos,
-        },
-      };
-    }));
+        return {
+          id: match.id,
+          createdAt: match.createdAt,
+          lastInteractionAt: match.lastInteractionAt,
+          partner: {
+            id: partner.id,
+            displayName: partner.displayName,
+            age: partner.age,
+            location: partner.location,
+            bio: partner.bio,
+            photos,
+            photoPaths,
+          },
+        };
+      })
+    );
 
     res.json({ matches: serialized });
   } catch (error) {
@@ -51,10 +54,3 @@ matchesRouter.get('/', async (req, res, next) => {
   }
 });
 
-async function extractPhotos(media: unknown): Promise<string[]> {
-  if (!media || typeof media !== 'object') return [];
-  const maybePhotos = (media as { photos?: unknown }).photos;
-  if (!Array.isArray(maybePhotos)) return [];
-  const urls = maybePhotos.filter((p): p is string => typeof p === 'string');
-  return Promise.all(urls.map((p) => resolvePhotoUrl(p)));
-}

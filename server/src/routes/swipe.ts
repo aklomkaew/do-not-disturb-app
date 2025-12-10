@@ -5,7 +5,7 @@ import { authGuard } from '../middleware/authGuard';
 import { prisma } from '../services/prisma';
 import { requireProfile } from '../utils/profile';
 import { sendMatchNotification } from '../services/notifications';
-import { resolvePhotoUrl } from '../services/storage';
+import { resolveMediaPhotos } from '../services/storage';
 
 export const swipeRouter = Router();
 
@@ -162,7 +162,7 @@ async function serializeProfileCard(profile: {
   location: string | null;
   media: unknown;
 }) {
-  const photos = await extractPhotos(profile.media);
+  const { photos } = await resolveMediaPhotos(profile.media);
 
   return {
     id: profile.id,
@@ -254,10 +254,3 @@ async function notifyParticipants(match: {
   }
 }
 
-async function extractPhotos(media: unknown): Promise<string[]> {
-  if (!media || typeof media !== 'object') return [];
-  const maybePhotos = (media as { photos?: unknown }).photos;
-  if (!Array.isArray(maybePhotos)) return [];
-  const urls = maybePhotos.filter((p): p is string => typeof p === 'string');
-  return Promise.all(urls.map((p) => resolvePhotoUrl(p)));
-}

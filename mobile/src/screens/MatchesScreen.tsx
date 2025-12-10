@@ -1,9 +1,22 @@
 import { ScreenContainer } from '@/components/ScreenContainer';
+import { PhotoCarousel } from '@/components/PhotoCarousel';
 import { API_BASE_URL } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type MatchItem = {
@@ -16,23 +29,21 @@ type MatchItem = {
     location: string | null;
     bio: string;
     photos?: string[];
+    photoPaths?: string[];
   };
 };
 
 export function MatchesScreen() {
-  const { accessToken } = useAuth();
+  const { getAccessToken } = useAuth();
   const [matches, setMatches] = useState<MatchItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<MatchItem | null>(null);
+  const modalWidth = Dimensions.get('window').width - 48;
 
   const fetchMatches = useCallback(
     async (isRefresh = false) => {
-      if (!accessToken) {
-        setError('Session expired.');
-        return;
-      }
-
       if (isRefresh) {
         setRefreshing(true);
       } else {
@@ -41,9 +52,10 @@ export function MatchesScreen() {
       setError(null);
 
       try {
+        const token = await getAccessToken();
         const response = await fetch(`${API_BASE_URL}/api/matches`, {
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${token}`,
           },
         });
 
@@ -60,7 +72,7 @@ export function MatchesScreen() {
         setRefreshing(false);
       }
     },
-    [accessToken]
+    [getAccessToken]
   );
 
   useFocusEffect(
@@ -97,8 +109,18 @@ export function MatchesScreen() {
         contentContainerStyle={matches.length === 0 && styles.emptyContainer}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchMatches(true)} tintColor={cupidTheme.colors.accent} />}
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            {item.partner.photos?.[0] ? <Image source={{ uri: item.partner.photos[0] }} style={styles.photo} /> : null}
+          <Pressable onPress={() => setSelectedMatch(item)} style={styles.card}>
+            {item.partner.photos && item.partner.photos.length > 0 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoStrip}>
+                {item.partner.photos.map((uri) => (
+                  <Image key={uri} source={{ uri }} style={styles.photoThumb} />
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.photoFallback}>
+                <Text style={styles.photoFallbackText}>No photos yet</Text>
+              </View>
+            )}
             <Text style={styles.heading}>
               {item.partner.displayName}, {item.partner.age}
             </Text>
@@ -107,7 +129,8 @@ export function MatchesScreen() {
               {item.partner.bio}
             </Text>
             <Text style={styles.meta}>Matched on {new Date(item.createdAt).toLocaleDateString()}</Text>
-          </View>
+            <Text style={styles.hint}>Tap to view gallery</Text>
+          </Pressable>
         )}
         ListEmptyComponent={
           <View style={styles.stateCard}>
@@ -116,6 +139,24 @@ export function MatchesScreen() {
           </View>
         }
       />
+      {selectedMatch ? (
+        <Modal animationType="slide" transparent visible onRequestClose={() => setSelectedMatch(null)}>
+          <View style={styles.modalBackdrop}>
+            <View style={[styles.modalCard, { width: modalWidth }]}>
+              {selectedMatch.partner.photos && selectedMatch.partner.photos.length > 0 ? (
+                <PhotoCarousel photos={selectedMatch.partner.photos} width={modalWidth - 24} height={320} />
+              ) : (
+                <View style={styles.photoFallback}>
+                  <Text style={styles.photoFallbackText}>No photos to display</Text>
+                </View>
+              )}
+              <Pressable style={styles.closeButton} onPress={() => setSelectedMatch(null)}>
+                <Text style={styles.closeLabel}>Close</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      ) : null}
     </ScreenContainer>
   );
 }
@@ -131,11 +172,27 @@ const styles = StyleSheet.create({
     borderColor: cupidTheme.colors.borderSubtle,
     ...cardShadow(),
   },
-  photo: {
+  photoStrip: {
+    flexGrow: 0,
+  },
+  photoThumb: {
+    width: 120,
+    height: 160,
+    borderRadius: cupidTheme.radii.md,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    marginRight: 8,
+  },
+  photoFallback: {
     width: '100%',
     height: 160,
     borderRadius: cupidTheme.radii.md,
     backgroundColor: cupidTheme.colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoFallbackText: {
+    color: cupidTheme.colors.textMuted,
+    fontWeight: '700',
   },
   stateCard: {
     padding: 22,
@@ -170,9 +227,39 @@ const styles = StyleSheet.create({
     color: cupidTheme.colors.textMuted,
     fontSize: 12,
   },
+  hint: {
+    color: cupidTheme.colors.accent,
+    fontSize: 12,
+    fontWeight: '700',
+  },
   errorText: {
     color: cupidTheme.colors.error,
     textAlign: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalCard: {
+    backgroundColor: cupidTheme.colors.surface,
+    borderRadius: cupidTheme.radii.xl,
+    padding: 16,
+    ...cardShadow('floating'),
+    gap: 12,
+  },
+  closeButton: {
+    borderRadius: cupidTheme.radii.lg,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.accent,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  closeLabel: {
+    color: cupidTheme.colors.accent,
+    fontWeight: '700',
   },
 });
 
