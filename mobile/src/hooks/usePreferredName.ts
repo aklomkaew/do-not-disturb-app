@@ -2,13 +2,31 @@ import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 
+type Listener = (name: string | null) => void;
+
+const listeners = new Set<Listener>();
+let cachedName: string | null = null;
+
+export function updatePreferredName(name: string | null) {
+  cachedName = name;
+  listeners.forEach((listener) => listener(cachedName));
+}
+
 export function usePreferredName() {
   const { accessToken, status, user } = useAuth();
-  const [name, setName] = useState<string | null>(null);
+  const [name, setName] = useState<string | null>(cachedName);
+
+  useEffect(() => {
+    const handleChange = (next: string | null) => setName(next);
+    listeners.add(handleChange);
+    return () => {
+      listeners.delete(handleChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (!accessToken || status !== 'authenticated') {
-      setName(null);
+      updatePreferredName(null);
       return;
     }
 
@@ -28,7 +46,7 @@ export function usePreferredName() {
 
         const data = await response.json();
         if (!cancelled) {
-          setName(data.profile?.displayName ?? null);
+          updatePreferredName(data.profile?.displayName ?? null);
         }
       } catch (error) {
         console.warn('Failed to load profile name', error);

@@ -12,6 +12,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { updatePreferredName } from '@/hooks/usePreferredName';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'CreateProfile'>;
 type Route = RouteProp<AuthStackParamList, 'CreateProfile'>;
@@ -115,6 +116,8 @@ export function CreateProfileScreen() {
       if (!response.ok) {
         throw new Error(await extractError(response));
       }
+
+      updatePreferredName(displayName.trim());
 
       navigation.reset({
         index: 0,

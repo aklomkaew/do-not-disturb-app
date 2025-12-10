@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { updatePreferredName } from '@/hooks/usePreferredName';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'ProfileEditor'>;
 type Route = RouteProp<AuthStackParamList, 'ProfileEditor'>;
@@ -102,6 +103,10 @@ export function ProfileEditorScreen() {
 
       if (!response.ok) {
         throw new Error(await extractError(response));
+      }
+
+      if (payload.displayName) {
+        updatePreferredName(String(payload.displayName));
       }
 
       navigation.goBack();

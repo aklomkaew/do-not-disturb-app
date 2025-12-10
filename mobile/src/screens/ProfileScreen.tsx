@@ -4,10 +4,11 @@ import type { AuthStackParamList } from '@/navigation/AuthenticatedNavigator';
 import { useAuth } from '@/hooks/useAuth';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { usePreferredName } from '@/hooks/usePreferredName';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -119,8 +120,13 @@ export function ProfileScreen() {
   const primaryPhoto = profile?.photos?.[0];
   const secondaryPhotos = profile?.photos?.slice(1) ?? [];
 
-  const fallbackId = user?.id ? user.id.slice(0, 4) : '0000';
-  const greetingName = profile?.displayName ?? user?.email?.split('@')[0] ?? `Member ${fallbackId}`;
+  const preferredName = usePreferredName();
+  const greetingName = useMemo(() => {
+    if (profile?.displayName) return profile.displayName;
+    if (preferredName) return preferredName;
+    if (user?.email) return user.email.split('@')[0];
+    return user?.id ? `Member ${user.id.slice(0, 4)}` : 'Friend';
+  }, [preferredName, profile?.displayName, user?.email, user?.id]);
 
   return (
     <ScreenContainer scrollable={false}>
