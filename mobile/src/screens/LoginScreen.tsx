@@ -3,44 +3,10 @@ import { StatusBanner } from '@/components/StatusBanner';
 import { useAuth } from '@/hooks/useAuth';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
 import { useMemo, useState } from 'react';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type Step = 'request' | 'verify';
-
-const journeySteps = [
-  {
-    title: 'Confirm your device',
-    description: 'Enter the mobile number tied to your invite.',
-  },
-  {
-    title: 'Verify with a 6-digit code',
-    description: 'Passwords create drag—codes keep things fast and safe.',
-  },
-  {
-    title: 'Meet high-intent matches',
-    description: 'Unlock your curated queue & mindful check-ins.',
-  },
-] as const;
-
-const benefits = [
-  {
-    icon: 'shield-checkmark-outline' as const,
-    title: 'Allowlisted & safe',
-    copy: 'Only approved profiles get access, keeping the vibe intentional.',
-  },
-  {
-    icon: 'leaf-outline' as const,
-    title: 'Designed for focus',
-    copy: 'Pause notifications anytime and protect deep work hours.',
-  },
-  {
-    icon: 'sparkles-outline' as const,
-    title: 'Curated intros',
-    copy: 'Swipe less with smart batches refreshed throughout the week.',
-  },
-];
 
 export function LoginScreen() {
   const { requestLoginCode, verifyLoginCode } = useAuth();
@@ -52,7 +18,9 @@ export function LoginScreen() {
   const [testCode, setTestCode] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [phoneLocked, setPhoneLocked] = useState(false);
 
+  const phonePlaceholder = '+1 555 123 4567';
   const ctaLabel = useMemo(() => (step === 'request' ? 'Send SMS code' : 'Verify & continue'), [step]);
 
   const cleanedPhoneNumber = phoneNumber.trim();
@@ -69,6 +37,7 @@ export function LoginScreen() {
       setStatusMessage(`We sent a code to ${response.target}. Enter it below to continue.`);
       setTestCode(response.testCode);
       setStep('verify');
+      setPhoneLocked(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to request code');
     } finally {
@@ -97,6 +66,15 @@ export function LoginScreen() {
     }
   };
 
+  const handleResetNumber = () => {
+    setStep('request');
+    setPhoneLocked(false);
+    setCode('');
+    setStatusMessage(null);
+    setTestCode(undefined);
+    setError(null);
+  };
+
   const canSubmit = () => {
     if (submitting) return false;
     if (step === 'request') {
@@ -108,97 +86,70 @@ export function LoginScreen() {
   return (
     <ScreenContainer>
       <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', android: undefined })} style={{ flex: 1 }}>
-        <View style={styles.grid}>
-          <View style={styles.stack}>
-            <StatusBanner status={apiStatus} timestamp={timestamp} />
-            <View style={styles.heroCard}>
-              <Text style={styles.heroEyebrow}>High intent dating</Text>
-              <Text style={styles.title}>Passwordless access built for privacy.</Text>
-              <Text style={styles.subtitle}>
-                One thoughtfully verified community where you decide when to be reachable. Two quick steps stand between you and
-                better matches.
+        <View style={styles.content}>
+          <Text style={styles.title}>Log in or join</Text>
+          <Text style={styles.subtitle}>No passwords—just a one-time SMS code.</Text>
+
+          <StatusBanner status={apiStatus} timestamp={timestamp} />
+
+          <View style={styles.card}>
+            <Text style={styles.formTitle}>{step === 'request' ? 'Enter your phone number' : 'Check your texts'}</Text>
+            <Text style={styles.formSubtitle}>
+              {step === 'request'
+                ? 'We’ll text a six-digit code to confirm it is you.'
+                : `We sent a six-digit code to ${normalizedPhoneNumber || phonePlaceholder}. Enter it below.`}
+            </Text>
+
+            <Text style={styles.label}>Phone number</Text>
+            <TextInput
+              style={[styles.input, phoneLocked && styles.inputLocked]}
+              placeholder={phonePlaceholder}
+              placeholderTextColor={cupidTheme.colors.textMuted}
+              autoCapitalize="none"
+              keyboardType="phone-pad"
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              editable={!submitting && !phoneLocked}
+            />
+
+            {step === 'verify' && (
+              <>
+                <Text style={styles.label}>6-digit code</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="123456"
+                  placeholderTextColor={cupidTheme.colors.textMuted}
+                  keyboardType="number-pad"
+                  value={code}
+                  onChangeText={setCode}
+                  maxLength={6}
+                  editable={!submitting}
+                />
+              </>
+            )}
+
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+            {statusMessage ? <Text style={styles.message}>{statusMessage}</Text> : null}
+            {testCode ? (
+              <Text style={styles.testCode}>
+                Dev code: <Text style={styles.testCodeValue}>{testCode}</Text>
               </Text>
+            ) : null}
 
-              <View style={styles.timeline}>
-                {journeySteps.map((item, index) => (
-                  <TimelineStep key={item.title} item={item} index={index} activeStep={step} />
-                ))}
-              </View>
+            <Pressable style={[styles.button, !canSubmit() && styles.buttonDisabled]} onPress={handleSubmit} disabled={!canSubmit()}>
+              {submitting ? <ActivityIndicator color={cupidTheme.colors.surface} /> : <Text style={styles.buttonLabel}>{ctaLabel}</Text>}
+            </Pressable>
 
-              <View style={styles.benefitList}>
-                {benefits.map((benefit) => (
-                  <View key={benefit.title} style={styles.benefitItem}>
-                    <Ionicons name={benefit.icon} size={18} color={cupidTheme.colors.accent} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.benefitTitle}>{benefit.title}</Text>
-                      <Text style={styles.benefitCopy}>{benefit.copy}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.stack}>
-            <View style={styles.card}>
-              <Text style={styles.formTitle}>{step === 'request' ? 'Step 1 · Verify your device' : 'Step 2 · Enter your code'}</Text>
-              <Text style={styles.formSubtitle}>
-                {step === 'request' ? 'We’ll text you a one-time code to this number.' : 'Codes expire quickly—enter it as soon as it arrives.'}
-              </Text>
-
-              <Text style={styles.label}>Phone number</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="+1 555 123 4567"
-                placeholderTextColor={cupidTheme.colors.textMuted}
-                autoCapitalize="none"
-                keyboardType="phone-pad"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                editable={!submitting}
-              />
-
-              {step === 'verify' && (
-                <>
-                  <Text style={styles.label}>6-digit code</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="123456"
-                    placeholderTextColor={cupidTheme.colors.textMuted}
-                    keyboardType="number-pad"
-                    value={code}
-                    onChangeText={setCode}
-                    maxLength={6}
-                    editable={!submitting}
-                  />
-                </>
-              )}
-
-              {error ? <Text style={styles.error}>{error}</Text> : null}
-              {statusMessage ? <Text style={styles.message}>{statusMessage}</Text> : null}
-              {testCode ? (
-                <Text style={styles.testCode}>
-                  Dev code: <Text style={styles.testCodeValue}>{testCode}</Text>
-                </Text>
-              ) : null}
-
-              <Pressable style={[styles.button, !canSubmit() && styles.buttonDisabled]} onPress={handleSubmit} disabled={!canSubmit()}>
-                {submitting ? <ActivityIndicator color={cupidTheme.colors.surface} /> : <Text style={styles.buttonLabel}>{ctaLabel}</Text>}
-              </Pressable>
-
-              {step === 'verify' ? (
-                <Pressable onPress={() => setStep('request')} style={styles.link}>
+            {step === 'verify' ? (
+              <View style={styles.linkGroup}>
+                <Pressable onPress={handleRequest} style={styles.link}>
                   <Text style={styles.linkLabel}>Need a new code?</Text>
                 </Pressable>
-              ) : null}
-            </View>
-
-            <View style={styles.supportCard}>
-              <Text style={styles.supportTitle}>Need help?</Text>
-              <Text style={styles.supportCopy}>
-                Tap “Need a new code?” to restart or email concierge@donotdisturb.app for priority support. Email login lands soon.
-              </Text>
-            </View>
+                <Pressable onPress={handleResetNumber} style={styles.link}>
+                  <Text style={styles.linkLabel}>Use a different number</Text>
+                </Pressable>
+              </View>
+            ) : null}
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -227,28 +178,9 @@ function normalizePhoneNumber(input: string) {
 }
 
 const styles = StyleSheet.create({
-  grid: {
+  content: {
     flex: 1,
-    gap: 20,
-  },
-  stack: {
-    gap: 16,
-  },
-  heroCard: {
-    padding: 24,
-    borderRadius: cupidTheme.radii.xl,
-    backgroundColor: cupidTheme.colors.surface,
-    gap: 16,
-    borderWidth: 1,
-    borderColor: cupidTheme.colors.borderSubtle,
-    ...cardShadow(),
-  },
-  heroEyebrow: {
-    color: cupidTheme.colors.accent,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    fontWeight: '700',
-    fontSize: 12,
+    gap: 18,
   },
   title: {
     fontSize: 30,
@@ -259,31 +191,6 @@ const styles = StyleSheet.create({
     color: cupidTheme.colors.textSecondary,
     fontSize: 16,
     lineHeight: 23,
-  },
-  timeline: {
-    gap: 12,
-  },
-  benefitList: {
-    gap: 10,
-  },
-  benefitItem: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'flex-start',
-    padding: 12,
-    borderRadius: cupidTheme.radii.lg,
-    backgroundColor: cupidTheme.colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: cupidTheme.colors.borderSubtle,
-  },
-  benefitTitle: {
-    fontWeight: '700',
-    color: cupidTheme.colors.textPrimary,
-  },
-  benefitCopy: {
-    color: cupidTheme.colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
   },
   card: {
     padding: 22,
@@ -318,6 +225,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: cupidTheme.colors.border,
+  },
+  inputLocked: {
+    opacity: 0.7,
   },
   error: {
     color: cupidTheme.colors.error,
@@ -354,104 +264,16 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.3,
   },
+  linkGroup: {
+    marginTop: 8,
+    gap: 6,
+  },
   link: {
     alignItems: 'center',
   },
   linkLabel: {
     color: cupidTheme.colors.accentSecondary,
     fontSize: 14,
-    marginTop: 8,
     fontWeight: '600',
-  },
-  supportCard: {
-    padding: 18,
-    borderRadius: cupidTheme.radii.lg,
-    backgroundColor: cupidTheme.colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: cupidTheme.colors.borderSubtle,
-    gap: 6,
-  },
-  supportTitle: {
-    fontWeight: '700',
-    color: cupidTheme.colors.textPrimary,
-  },
-  supportCopy: {
-    color: cupidTheme.colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-});
-
-function TimelineStep({
-  item,
-  index,
-  activeStep,
-}: {
-  item: (typeof journeySteps)[number];
-  index: number;
-  activeStep: Step;
-}) {
-  const activeIndex = activeStep === 'request' ? 0 : 1;
-  const isComplete = index < activeIndex;
-  const isActive = index === activeIndex;
-
-  return (
-    <View style={[stylesTimeline.item, isActive && stylesTimeline.itemActive]}>
-      <View style={[stylesTimeline.badge, (isActive || isComplete) && stylesTimeline.badgeActive]}>
-        <Text style={[stylesTimeline.badgeLabel, (isActive || isComplete) && stylesTimeline.badgeLabelActive]}>{index + 1}</Text>
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={[stylesTimeline.title, isActive && stylesTimeline.titleActive]}>{item.title}</Text>
-        <Text style={stylesTimeline.copy}>{item.description}</Text>
-      </View>
-    </View>
-  );
-}
-
-const stylesTimeline = StyleSheet.create({
-  item: {
-    flexDirection: 'row',
-    gap: 12,
-    padding: 12,
-    borderRadius: cupidTheme.radii.lg,
-    borderWidth: 1,
-    borderColor: cupidTheme.colors.borderSubtle,
-  },
-  itemActive: {
-    borderColor: cupidTheme.colors.accent,
-    backgroundColor: cupidTheme.colors.accentSoft,
-  },
-  badge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: cupidTheme.colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: cupidTheme.colors.surface,
-  },
-  badgeActive: {
-    borderColor: cupidTheme.colors.accent,
-    backgroundColor: cupidTheme.colors.surface,
-  },
-  badgeLabel: {
-    color: cupidTheme.colors.textMuted,
-    fontWeight: '700',
-  },
-  badgeLabelActive: {
-    color: cupidTheme.colors.accent,
-  },
-  title: {
-    fontWeight: '700',
-    color: cupidTheme.colors.textSecondary,
-  },
-  titleActive: {
-    color: cupidTheme.colors.textPrimary,
-  },
-  copy: {
-    color: cupidTheme.colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
   },
 });
