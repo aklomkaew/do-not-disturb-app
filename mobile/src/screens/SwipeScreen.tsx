@@ -140,13 +140,7 @@ export function SwipeScreen() {
           </Pressable>
         </View>
       ) : currentProfile ? (
-        <ProfileCard
-          profile={currentProfile}
-          onPass={() => handleSwipe('LEFT')}
-          onLike={() => handleSwipe('RIGHT')}
-          onRewind={handleRewind}
-          actionLoading={actionLoading}
-        />
+        <ProfileCard profile={currentProfile} onPass={() => handleSwipe('LEFT')} onLike={() => handleSwipe('RIGHT')} actionLoading={actionLoading} />
       ) : (
         <View style={styles.stateCard}>
           <Ionicons name="sparkles-outline" size={26} color={cupidTheme.colors.accent} />
@@ -158,6 +152,15 @@ export function SwipeScreen() {
           <Text style={styles.tipLabel}>Tip: Update your profile to unlock fresh batches faster.</Text>
         </View>
       )}
+
+      {!loading && !error ? (
+        <Pressable style={[styles.globalRewind, actionLoading && styles.globalRewindDisabled]} onPress={handleRewind} disabled={actionLoading}>
+          <Ionicons name="play-back" size={18} color={actionLoading ? cupidTheme.colors.textMuted : cupidTheme.colors.accentSecondary} />
+          <Text style={[styles.globalRewindLabel, actionLoading && styles.globalRewindLabelDisabled]}>
+            {actionLoading ? 'Rewinding…' : 'Rewind last pick'}
+          </Text>
+        </Pressable>
+      ) : null}
     </ScreenContainer>
   );
 }
@@ -166,13 +169,11 @@ function ProfileCard({
   profile,
   onPass,
   onLike,
-  onRewind,
   actionLoading,
 }: {
   profile: DeckProfile;
   onPass: () => void;
   onLike: () => void;
-  onRewind: () => void;
   actionLoading: boolean;
 }) {
   const photos = profile.photos ?? [];
@@ -223,10 +224,6 @@ function ProfileCard({
         </Pressable>
       </View>
 
-      <Pressable style={styles.rewindButton} onPress={onRewind} disabled={actionLoading}>
-        <Ionicons name="play-back" size={18} color={cupidTheme.colors.accentSecondary} />
-        <Text style={styles.rewindLabel}>Rewind last pick</Text>
-      </Pressable>
     </View>
   );
 }
@@ -282,6 +279,29 @@ const styles = StyleSheet.create({
   heroCopy: {
     color: cupidTheme.colors.textSecondary,
     fontSize: 13,
+  },
+  globalRewind: {
+    marginTop: 16,
+    borderRadius: cupidTheme.radii.lg,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.accentSecondary,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: cupidTheme.colors.surface,
+    ...cardShadow(),
+  },
+  globalRewindDisabled: {
+    opacity: 0.6,
+  },
+  globalRewindLabel: {
+    color: cupidTheme.colors.accentSecondary,
+    fontWeight: '700',
+  },
+  globalRewindLabelDisabled: {
+    color: cupidTheme.colors.textMuted,
   },
   stateCard: {
     padding: 22,
@@ -389,22 +409,6 @@ const styles = StyleSheet.create({
   },
   actionLabelContrast: {
     color: cupidTheme.colors.surface,
-  },
-  rewindButton: {
-    marginTop: 12,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: cupidTheme.radii.lg,
-    borderWidth: 1,
-    borderColor: cupidTheme.colors.accentSecondary,
-    backgroundColor: cupidTheme.colors.surfaceMuted,
-  },
-  rewindLabel: {
-    color: cupidTheme.colors.accentSecondary,
-    fontWeight: '700',
   },
   dots: {
     flexDirection: 'row',
