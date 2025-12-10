@@ -20,7 +20,7 @@ const journeySteps = [
   },
   {
     title: 'Meet high-intent matches',
-    description: 'Unlock your curated queue & private inbox.',
+    description: 'Unlock your curated queue & mindful check-ins.',
   },
 ] as const;
 

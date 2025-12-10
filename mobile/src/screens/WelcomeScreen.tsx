@@ -107,7 +107,7 @@ export function WelcomeScreen() {
   const loadingCopy =
     profileState === 'missing'
       ? 'Hang tight while we spin up the rest of your onboarding.'
-      : 'Loading your matches, preferences, and messages.';
+      : 'Loading your matches, preferences, and pause settings.';
 
   const statusMeta = (() => {
     switch (profileState) {
@@ -149,7 +149,7 @@ export function WelcomeScreen() {
   const checklist = [
     { label: 'Confirm session', detail: 'Refresh tokens & fetch member status.' },
     { label: 'Bootstrap profile', detail: 'Make sure your basics & photos are ready.' },
-    { label: 'Route to experience', detail: 'Drop you into swiping, matches, or inbox.' },
+    { label: 'Route to experience', detail: 'Drop you into swiping or the matches hub.' },
   ];
 
   return (

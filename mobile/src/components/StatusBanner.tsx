@@ -28,7 +28,7 @@ export const StatusBanner = memo(function StatusBanner({ status, timestamp }: St
         background: '#FFECEF',
         border: '#FFD0D9',
         label: 'API offline',
-        helper: 'Something is down. Swiping & messaging may pause momentarily.',
+        helper: 'Something is down. Swiping & match refreshes may pause momentarily.',
       };
     }
     return {

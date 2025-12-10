@@ -118,12 +118,12 @@ export function MatchesScreen() {
             </Text>
             <View style={styles.cardFooter}>
               <View style={styles.metaChip}>
-                <Ionicons name="sparkles-outline" size={14} color={cupidTheme.colors.accent} />
-                <Text style={styles.metaChipLabel}>Thread coming soon</Text>
+                <Ionicons name="people-outline" size={14} color={cupidTheme.colors.accent} />
+                <Text style={styles.metaChipLabel}>Mutual interest logged</Text>
               </View>
               <View style={styles.metaChip}>
-                <Ionicons name="time-outline" size={14} color={cupidTheme.colors.textMuted} />
-                <Text style={styles.metaChipLabel}>Replies open after both opt in</Text>
+                <Ionicons name="sparkles-outline" size={14} color={cupidTheme.colors.textMuted} />
+                <Text style={styles.metaChipLabel}>Refresh deck for next steps</Text>
               </View>
             </View>
           </View>
@@ -251,7 +251,7 @@ function MatchesHeader({ matchCount }: { matchCount: number }) {
         <Text style={headerStyles.eyebrow}>Connections</Text>
         <Text style={headerStyles.title}>Your matches</Text>
         <Text style={headerStyles.copy}>
-          We group compatible profiles and refresh them a few times per week. Start a convo once messaging unlocks.
+          We group compatible profiles and refresh them a few times per week. Check in here for every mutual match and curated intro.
         </Text>
       </View>
       <View style={headerStyles.countPill}>
