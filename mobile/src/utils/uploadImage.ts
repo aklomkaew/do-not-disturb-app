@@ -59,7 +59,6 @@ export async function uploadImage({ assetUri, accessToken, filename }: UploadIma
   } catch (error) {
     console.warn('Failed to resolve preview URL', error);
   }
-
   return { path: data.path, previewUrl };
 }
 

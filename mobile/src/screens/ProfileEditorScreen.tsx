@@ -5,11 +5,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
 import { PhotoEntry, hydratePhotoEntries, mergePhotoEntries, partitionSupportedAssets } from '@/utils/photoHelpers';
 import { cupidTheme, cardShadow } from '@/constants/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { updatePreferredName } from '@/hooks/usePreferredName';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'ProfileEditor'>;
 type Route = RouteProp<AuthStackParamList, 'ProfileEditor'>;
@@ -27,13 +29,14 @@ export function ProfileEditorScreen() {
   const [gender, setGender] = useState(route.params.profile.gender);
   const [relationshipStatus, setRelationshipStatus] = useState(route.params.profile.relationshipStatus);
   const [bio, setBio] = useState(route.params.profile.bio ?? '');
-  const [location, setLocation] = useState(route.params.profile.location ?? '');
+  const [instagramHandle, setInstagramHandle] = useState(route.params.profile.instagramHandle ?? '');
   const [notifyMatches, setNotifyMatches] = useState(route.params.profile.matchNotificationsEnabled);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const initialPhotos = hydratePhotoEntries(route.params.profile.photoPaths, route.params.profile.photos);
   const [photos, setPhotos] = useState<PhotoEntry[]>(initialPhotos);
   const [uploading, setUploading] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const pickPhotos = async () => {
     setError(null);
@@ -96,7 +99,7 @@ export function ProfileEditorScreen() {
         gender,
         relationshipStatus,
         bio: bio.trim(),
-        location: location.trim(),
+        instagramHandle: instagramHandle.trim().replace(/^@/, '') || null,
         matchNotificationsEnabled: notifyMatches,
         media: { photos: photos.map((photo) => photo.path) },
       };
@@ -118,6 +121,10 @@ export function ProfileEditorScreen() {
         throw new Error(await extractError(response));
       }
 
+      if (payload.displayName) {
+        updatePreferredName(String(payload.displayName));
+      }
+
       navigation.goBack();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update profile');
@@ -126,11 +133,24 @@ export function ProfileEditorScreen() {
     }
   };
 
+  const confirmCancel = () => {
+    setConfirmingCancel(true);
+  };
+
+  const handleDiscardChanges = () => {
+    setConfirmingCancel(false);
+    navigation.goBack();
+  };
+
   return (
     <ScreenContainer scrollable={false}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.heading}>Edit profile</Text>
         <Text style={styles.subheading}>Update your basic details anytime.</Text>
+        <View style={styles.tipCard}>
+          <Ionicons name="bulb-outline" size={18} color={cupidTheme.colors.accent} />
+          <Text style={styles.tipCopy}>Profiles with 3+ photos and detailed bios see 2.4× more matches.</Text>
+        </View>
 
         <Text style={styles.label}>Photos (first is your profile picture)</Text>
         <Text style={styles.helper}>{uploading ? 'Uploading...' : 'Add up to 5 (3 recommended).'}</Text>
@@ -176,13 +196,14 @@ export function ProfileEditorScreen() {
         <Text style={styles.label}>Relationship status</Text>
         <OptionGroup options={relationshipOptions} value={relationshipStatus} onChange={setRelationshipStatus} />
 
-        <Text style={styles.label}>Location</Text>
+        <Text style={styles.label}>Instagram handle</Text>
         <TextInput
           style={styles.input}
-          value={location}
-          onChangeText={setLocation}
-          placeholder="City, Country"
+          value={instagramHandle}
+          onChangeText={setInstagramHandle}
+          placeholder="@yourhandle"
           placeholderTextColor={cupidTheme.colors.textMuted}
+          autoCapitalize="none"
         />
 
         <Text style={styles.label}>Bio</Text>
@@ -190,7 +211,7 @@ export function ProfileEditorScreen() {
           style={[styles.input, styles.textArea]}
           value={bio}
           onChangeText={setBio}
-          placeholder="Share a little about yourself"
+          placeholder="Three adjectives, your interests, and why someone should date you."
           placeholderTextColor={cupidTheme.colors.textMuted}
           multiline
           numberOfLines={4}
@@ -212,10 +233,31 @@ export function ProfileEditorScreen() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Pressable style={[styles.button, submitting && styles.buttonDisabled]} onPress={handleSave} disabled={submitting}>
-          {submitting ? <ActivityIndicator color={cupidTheme.colors.surface} /> : <Text style={styles.buttonLabel}>Save changes</Text>}
-        </Pressable>
+        <View style={styles.buttonRow}>
+          <Pressable style={styles.cancelButton} onPress={confirmCancel} disabled={submitting}>
+            <Text style={styles.cancelLabel}>Cancel</Text>
+          </Pressable>
+          <Pressable style={[styles.button, submitting && styles.buttonDisabled]} onPress={handleSave} disabled={submitting}>
+            {submitting ? <ActivityIndicator color={cupidTheme.colors.surface} /> : <Text style={styles.buttonLabel}>Save changes</Text>}
+          </Pressable>
+        </View>
       </ScrollView>
+      <Modal visible={confirmingCancel} transparent animationType="fade" onRequestClose={() => setConfirmingCancel(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Discard changes?</Text>
+            <Text style={styles.modalCopy}>If you leave now, any edits you made will be lost.</Text>
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.modalSecondary} onPress={() => setConfirmingCancel(false)}>
+                <Text style={styles.modalSecondaryLabel}>Keep editing</Text>
+              </Pressable>
+              <Pressable style={styles.modalPrimary} onPress={handleDiscardChanges}>
+                <Text style={styles.modalPrimaryLabel}>Discard</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -261,6 +303,21 @@ const styles = StyleSheet.create({
   subheading: {
     color: cupidTheme.colors.textSecondary,
     marginBottom: 8,
+  },
+  tipCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 14,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+  },
+  tipCopy: {
+    color: cupidTheme.colors.textSecondary,
+    flex: 1,
+    lineHeight: 18,
   },
   helper: {
     color: cupidTheme.colors.textMuted,
@@ -380,8 +437,26 @@ const styles = StyleSheet.create({
   error: {
     color: cupidTheme.colors.error,
   },
-  button: {
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
     marginTop: 16,
+  },
+  cancelButton: {
+    flex: 1,
+    borderRadius: cupidTheme.radii.lg,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.border,
+    paddingVertical: 16,
+    alignItems: 'center',
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+  },
+  cancelLabel: {
+    color: cupidTheme.colors.textSecondary,
+    fontWeight: '700',
+  },
+  button: {
+    flex: 1,
     backgroundColor: cupidTheme.colors.accent,
     borderRadius: cupidTheme.radii.lg,
     paddingVertical: 16,
@@ -396,6 +471,59 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 16,
     letterSpacing: 0.4,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    borderRadius: cupidTheme.radii.xl,
+    backgroundColor: cupidTheme.colors.surface,
+    padding: 24,
+    gap: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: cupidTheme.colors.textPrimary,
+  },
+  modalCopy: {
+    color: cupidTheme.colors.textSecondary,
+    lineHeight: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  modalSecondary: {
+    flex: 1,
+    borderRadius: cupidTheme.radii.lg,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.border,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+  },
+  modalSecondaryLabel: {
+    color: cupidTheme.colors.textSecondary,
+    fontWeight: '700',
+  },
+  modalPrimary: {
+    flex: 1,
+    borderRadius: cupidTheme.radii.lg,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: cupidTheme.colors.accent,
+    ...cardShadow('floating'),
+  },
+  modalPrimaryLabel: {
+    color: cupidTheme.colors.surface,
+    fontWeight: '800',
   },
 });
 

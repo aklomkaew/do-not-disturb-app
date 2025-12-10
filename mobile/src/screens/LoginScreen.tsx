@@ -18,7 +18,9 @@ export function LoginScreen() {
   const [testCode, setTestCode] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [phoneLocked, setPhoneLocked] = useState(false);
 
+  const phonePlaceholder = '+1 555 123 4567';
   const ctaLabel = useMemo(() => (step === 'request' ? 'Send SMS code' : 'Verify & continue'), [step]);
 
   const cleanedPhoneNumber = phoneNumber.trim();
@@ -35,6 +37,7 @@ export function LoginScreen() {
       setStatusMessage(`We sent a code to ${response.target}. Enter it below to continue.`);
       setTestCode(response.testCode);
       setStep('verify');
+      setPhoneLocked(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to request code');
     } finally {
@@ -63,6 +66,15 @@ export function LoginScreen() {
     }
   };
 
+  const handleResetNumber = () => {
+    setStep('request');
+    setPhoneLocked(false);
+    setCode('');
+    setStatusMessage(null);
+    setTestCode(undefined);
+    setError(null);
+  };
+
   const canSubmit = () => {
     if (submitting) return false;
     if (step === 'request') {
@@ -74,61 +86,71 @@ export function LoginScreen() {
   return (
     <ScreenContainer>
       <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', android: undefined })} style={{ flex: 1 }}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Welcome to Do Not Disturb</Text>
-          <Text style={styles.subtitle}>
-            Enter your phone number to log in or create an account. We’ll text you a one-time code to continue.
-          </Text>
-        </View>
+        <View style={styles.content}>
+          <Text style={styles.title}>Log in or join</Text>
+          <Text style={styles.subtitle}>No passwords—just a one-time SMS code.</Text>
 
-        <StatusBanner status={apiStatus} timestamp={timestamp} />
+          <StatusBanner status={apiStatus} timestamp={timestamp} />
 
-        <View style={styles.card}>
-          <Text style={styles.label}>Phone number</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="+1 555 123 4567"
-            placeholderTextColor={cupidTheme.colors.textMuted}
-            autoCapitalize="none"
-            keyboardType="phone-pad"
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-            editable={!submitting}
-          />
-
-          {step === 'verify' && (
-            <>
-              <Text style={styles.label}>6-digit code</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="123456"
-                placeholderTextColor={cupidTheme.colors.textMuted}
-                keyboardType="number-pad"
-                value={code}
-                onChangeText={setCode}
-                maxLength={6}
-                editable={!submitting}
-              />
-            </>
-          )}
-
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          {statusMessage ? <Text style={styles.message}>{statusMessage}</Text> : null}
-          {testCode ? (
-            <Text style={styles.testCode}>
-              Dev code: <Text style={styles.testCodeValue}>{testCode}</Text>
+          <View style={styles.card}>
+            <Text style={styles.formTitle}>{step === 'request' ? 'Enter your phone number' : 'Check your texts'}</Text>
+            <Text style={styles.formSubtitle}>
+              {step === 'request'
+                ? 'We’ll text a six-digit code to confirm it is you.'
+                : `We sent a six-digit code to ${normalizedPhoneNumber || phonePlaceholder}. Enter it below.`}
             </Text>
-          ) : null}
 
-          <Pressable style={[styles.button, !canSubmit() && styles.buttonDisabled]} onPress={handleSubmit} disabled={!canSubmit()}>
-            {submitting ? <ActivityIndicator color={cupidTheme.colors.surface} /> : <Text style={styles.buttonLabel}>{ctaLabel}</Text>}
-          </Pressable>
+            <Text style={styles.label}>Phone number</Text>
+            <TextInput
+              style={[styles.input, phoneLocked && styles.inputLocked]}
+              placeholder={phonePlaceholder}
+              placeholderTextColor={cupidTheme.colors.textMuted}
+              autoCapitalize="none"
+              keyboardType="phone-pad"
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              editable={!submitting && !phoneLocked}
+            />
 
-          {step === 'verify' ? (
-            <Pressable onPress={() => setStep('request')} style={styles.link}>
-              <Text style={styles.linkLabel}>Need a new code?</Text>
+            {step === 'verify' && (
+              <>
+                <Text style={styles.label}>6-digit code</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="123456"
+                  placeholderTextColor={cupidTheme.colors.textMuted}
+                  keyboardType="number-pad"
+                  value={code}
+                  onChangeText={setCode}
+                  maxLength={6}
+                  editable={!submitting}
+                />
+              </>
+            )}
+
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+            {statusMessage ? <Text style={styles.message}>{statusMessage}</Text> : null}
+            {testCode ? (
+              <Text style={styles.testCode}>
+                Dev code: <Text style={styles.testCodeValue}>{testCode}</Text>
+              </Text>
+            ) : null}
+
+            <Pressable style={[styles.button, !canSubmit() && styles.buttonDisabled]} onPress={handleSubmit} disabled={!canSubmit()}>
+              {submitting ? <ActivityIndicator color={cupidTheme.colors.surface} /> : <Text style={styles.buttonLabel}>{ctaLabel}</Text>}
             </Pressable>
-          ) : null}
+
+            {step === 'verify' ? (
+              <View style={styles.linkGroup}>
+                <Pressable onPress={handleRequest} style={styles.link}>
+                  <Text style={styles.linkLabel}>Need a new code?</Text>
+                </Pressable>
+                <Pressable onPress={handleResetNumber} style={styles.link}>
+                  <Text style={styles.linkLabel}>Use a different number</Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
         </View>
       </KeyboardAvoidingView>
     </ScreenContainer>
@@ -156,8 +178,9 @@ function normalizePhoneNumber(input: string) {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    gap: 10,
+  content: {
+    flex: 1,
+    gap: 18,
   },
   title: {
     fontSize: 30,
@@ -170,7 +193,6 @@ const styles = StyleSheet.create({
     lineHeight: 23,
   },
   card: {
-    marginTop: 18,
     padding: 22,
     borderRadius: cupidTheme.radii.xl,
     backgroundColor: cupidTheme.colors.surface,
@@ -178,6 +200,16 @@ const styles = StyleSheet.create({
     borderColor: cupidTheme.colors.borderSubtle,
     gap: 14,
     ...cardShadow(),
+  },
+  formTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: cupidTheme.colors.textPrimary,
+  },
+  formSubtitle: {
+    color: cupidTheme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
   },
   label: {
     color: cupidTheme.colors.textSecondary,
@@ -193,6 +225,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: cupidTheme.colors.border,
+  },
+  inputLocked: {
+    opacity: 0.7,
   },
   error: {
     color: cupidTheme.colors.error,
@@ -229,13 +264,16 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.3,
   },
+  linkGroup: {
+    marginTop: 8,
+    gap: 6,
+  },
   link: {
     alignItems: 'center',
   },
   linkLabel: {
     color: cupidTheme.colors.accentSecondary,
     fontSize: 14,
-    marginTop: 8,
     fontWeight: '600',
   },
 });

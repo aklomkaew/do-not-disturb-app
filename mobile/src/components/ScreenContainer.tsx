@@ -1,8 +1,9 @@
-import { ReactNode } from 'react';
+import { ReactNode, useMemo } from 'react';
 import { ScrollView, StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/hooks/useAuth';
 import { cupidTheme } from '@/constants/theme';
+import { usePreferredName } from '@/hooks/usePreferredName';
 
 interface ScreenContainerProps {
   children: ReactNode;
@@ -11,17 +12,60 @@ interface ScreenContainerProps {
 }
 
 export function ScreenContainer({ children, scrollable = true, contentContainerStyle }: ScreenContainerProps) {
-  const { status, logout } = useAuth();
+  const { status, logout, user } = useAuth();
+  const preferredName = usePreferredName();
+
+  const userLabel = useMemo(() => {
+    if (!user) return 'Guest';
+    if (preferredName) return preferredName;
+    if (user.email) return user.email;
+    return `Member ${user.id.slice(0, 6)}`;
+  }, [preferredName, user]);
+
+  const initials = useMemo(() => {
+    if (preferredName) {
+      return preferredName
+        .split(' ')
+        .map((chunk) => chunk[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.slice(0, 2).toUpperCase();
+    }
+    if (user?.id) {
+      return user.id.slice(0, 2).toUpperCase();
+    }
+    return 'DN';
+  }, [preferredName, user]);
 
   const content = (
-    <View style={styles.content}>
-      {status === 'authenticated' ? (
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-            <Text style={styles.logoutLabel}>Log out</Text>
-          </TouchableOpacity>
+    <View style={[styles.content, !scrollable && styles.contentPadded]}>
+      <View style={styles.chrome}>
+        <View style={styles.brandBlock}>
+          <Text style={styles.eyebrow}>Do Not Disturb</Text>
+          <Text style={styles.brandTitle}>{status === 'authenticated' ? 'Welcome back' : 'Modern dating, calmer pace.'}</Text>
+          <Text style={styles.brandCopy}>
+            Slow down, opt-in, and connect with people who respect boundaries as much as chemistry.
+          </Text>
         </View>
-      ) : null}
+        {status === 'authenticated' ? (
+          <TouchableOpacity style={styles.userPill} onPress={logout}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarLabel}>{initials}</Text>
+            </View>
+            <View>
+              <Text style={styles.userLabel}>{userLabel}</Text>
+              <Text style={styles.logoutLabel}>Log out</Text>
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.betaPill}>
+            <Text style={styles.betaLabel}>Private beta</Text>
+          </View>
+        )}
+      </View>
       {children}
     </View>
   );
@@ -85,26 +129,90 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 32,
   },
   content: {
     flex: 1,
-    padding: 16,
-    gap: 16,
+    paddingVertical: 16,
+    gap: 20,
+    maxWidth: 720,
+    alignSelf: 'center',
   },
-  header: {
-    alignItems: 'flex-end',
+  contentPadded: {
+    paddingHorizontal: 20,
   },
-  logoutButton: {
-    alignSelf: 'flex-end',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: cupidTheme.radii.pill,
+  chrome: {
+    padding: 20,
+    borderRadius: cupidTheme.radii.xl,
     backgroundColor: cupidTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+    flexDirection: 'row',
+    gap: 16,
+    alignItems: 'center',
+  },
+  brandBlock: {
+    flex: 1,
+    gap: 4,
+  },
+  eyebrow: {
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    fontSize: 12,
+    color: cupidTheme.colors.accent,
+    fontWeight: '700',
+  },
+  brandTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: cupidTheme.colors.textPrimary,
+  },
+  brandCopy: {
+    color: cupidTheme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  userPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: cupidTheme.radii.pill,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
     borderWidth: 1,
     borderColor: cupidTheme.colors.border,
   },
-  logoutLabel: {
+  userLabel: {
     fontWeight: '700',
-    color: cupidTheme.colors.textSecondary,
+    color: cupidTheme.colors.textPrimary,
+  },
+  logoutLabel: {
+    fontSize: 12,
+    color: cupidTheme.colors.textMuted,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: cupidTheme.colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarLabel: {
+    color: cupidTheme.colors.textPrimary,
+    fontWeight: '800',
+  },
+  betaPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: cupidTheme.radii.pill,
+    backgroundColor: cupidTheme.colors.accentSoft,
+  },
+  betaLabel: {
+    color: cupidTheme.colors.accentBold,
+    fontWeight: '700',
+    fontSize: 13,
   },
 });
