@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Modal, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
-import { PhotoEntry, hydratePhotoEntries, mergePhotoEntries } from '@/utils/photoHelpers';
+import { PhotoEntry, hydratePhotoEntries, mergePhotoEntries, partitionSupportedAssets } from '@/utils/photoHelpers';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { updatePreferredName } from '@/hooks/usePreferredName';
@@ -39,6 +39,8 @@ export function ProfileEditorScreen() {
   const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const pickPhotos = async () => {
+    setError(null);
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       setError('We need access to your photos to upload images.');
@@ -54,20 +56,36 @@ export function ProfileEditorScreen() {
 
     if (result.canceled) return;
 
-    const selected = result.assets?.map((asset) => asset.uri).filter(Boolean) ?? [];
+    const assets = result.assets ?? [];
+    const { supported, rejected } = partitionSupportedAssets(assets);
+    if (rejected.length > 0) {
+      setError(
+        `Skipped ${rejected.length} unsupported file${rejected.length > 1 ? 's' : ''}. Only JPG, JPEG, PNG, and WEBP images are supported.`
+      );
+    }
+
+    const selected = supported.map((asset) => asset.uri).filter(Boolean);
     if (selected.length === 0) return;
 
     try {
       setUploading(true);
       const token = await getAccessToken();
-      const uploaded = await Promise.all(selected.map((uri) => uploadImage({ assetUri: uri, accessToken: token })));
-      const entries = uploaded.map(({ path, previewUrl }) => ({ path, url: previewUrl }));
-      setPhotos((prev) => mergePhotoEntries(prev, entries));
+      const uploaded = await Promise.all(
+        selected.map(async (uri) => {
+          const { path, previewUrl } = await uploadImage({ assetUri: uri, accessToken: token });
+          return { path, url: previewUrl ?? uri };
+        })
+      );
+      setPhotos((prev) => mergePhotoEntries(prev, uploaded));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload photos.');
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleRemovePhoto = (path: string) => {
+    setPhotos((prev) => prev.filter((photo) => photo.path !== path));
   };
 
   const handleSave = async () => {
@@ -139,7 +157,10 @@ export function ProfileEditorScreen() {
         <View style={styles.photoRow}>
           {photos.map((photo, idx) => (
             <View key={photo.path} style={styles.photoItem}>
-              <Image source={{ uri: photo.url }} style={styles.photo} />
+              <Image source={{ uri: photo.url ?? photo.path }} style={styles.photo} />
+              <Pressable style={styles.photoRemove} onPress={() => handleRemovePhoto(photo.path)} accessibilityLabel="Remove photo">
+                <Text style={styles.photoRemoveLabel}>×</Text>
+              </Pressable>
               <Text style={styles.photoBadge}>{idx === 0 ? 'Profile' : `#${idx + 1}`}</Text>
             </View>
           ))}
@@ -342,6 +363,24 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: '100%',
+  },
+  photoRemove: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  photoRemoveLabel: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+    lineHeight: 18,
   },
   photoBadge: {
     position: 'absolute',

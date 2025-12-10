@@ -1,11 +1,12 @@
 import { ScreenContainer } from '@/components/ScreenContainer';
+import { PhotoCarousel } from '@/components/PhotoCarousel';
 import { API_BASE_URL } from '@/constants/config';
 import type { AuthStackParamList } from '@/navigation/AuthenticatedNavigator';
 import { useAuth } from '@/hooks/useAuth';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ActivityIndicator, Alert, Dimensions, Image, Modal, Pressable, ScrollView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { usePreferredName } from '@/hooks/usePreferredName';
@@ -21,31 +22,29 @@ type ProfileResponse = {
   instagramHandle: string | null;
   matchNotificationsEnabled: boolean;
   photos: string[];
+  photoPaths: string[];
 };
 
 export function ProfileScreen() {
-  const { user, accessToken, logout } = useAuth();
+  const { user, logout, getAccessToken } = useAuth();
   const navigation = useNavigation<Navigation>();
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const galleryWidth = Dimensions.get('window').width - 64;
+  const allPhotos = profile?.photos ?? [];
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async () => {
-    if (!accessToken) {
-      setStatus('error');
-      setError('Session expired. Please log in again.');
-      return;
-    }
-
     try {
       setStatus('loading');
       setError(null);
+      const token = await getAccessToken();
       const response = await fetch(`${API_BASE_URL}/api/profile/me`, {
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -63,6 +62,7 @@ export function ProfileScreen() {
         instagramHandle: data.profile.instagramHandle ?? null,
         matchNotificationsEnabled: data.profile.matchNotificationsEnabled ?? true,
         photos: data.profile.media?.photos ?? [],
+        photoPaths: data.profile.media?.paths ?? [],
       };
 
       setProfile(normalized);
@@ -71,7 +71,7 @@ export function ProfileScreen() {
       setStatus('error');
       setError(err instanceof Error ? err.message : 'Failed to load profile');
     }
-  }, [accessToken]);
+  }, [getAccessToken]);
 
   useFocusEffect(
     useCallback(() => {
@@ -102,7 +102,7 @@ export function ProfileScreen() {
       const response = await fetch(`${API_BASE_URL}/api/profile/me`, {
         method: 'DELETE',
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -134,7 +134,22 @@ export function ProfileScreen() {
     <ScreenContainer scrollable={false}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.card}>
-          {primaryPhoto ? <Image source={{ uri: primaryPhoto }} style={styles.heroImage} /> : null}
+          {allPhotos.length > 0 ? (
+            <View style={styles.gallery}>
+              <PhotoCarousel photos={allPhotos} width={galleryWidth} height={260} />
+              {allPhotos.length > 1 ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.thumbRow}>
+                  {allPhotos.map((uri) => (
+                    <Image key={uri} source={{ uri }} style={styles.thumb} />
+                  ))}
+                </ScrollView>
+              ) : null}
+            </View>
+          ) : (
+            <View style={[styles.photoFallback, { width: galleryWidth }]}>
+              <Text style={styles.photoFallbackText}>Add photos to showcase yourself.</Text>
+            </View>
+          )}
           <Text style={styles.heading}>Profile & Settings</Text>
           <Text style={styles.greeting}>Hello {greetingName}</Text>
 
@@ -229,6 +244,32 @@ const styles = StyleSheet.create({
     borderRadius: cupidTheme.radii.xl,
     backgroundColor: cupidTheme.colors.surface,
     gap: 14,
+  gallery: {
+    gap: 8,
+    marginBottom: 8,
+  },
+  thumbRow: {
+    flexGrow: 0,
+  },
+  thumb: {
+    width: 64,
+    height: 64,
+    borderRadius: cupidTheme.radii.md,
+    marginRight: 8,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+  },
+  photoFallback: {
+    height: 220,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  photoFallbackText: {
+    color: cupidTheme.colors.textMuted,
+    fontWeight: '700',
+  },
     borderWidth: 1,
     borderColor: cupidTheme.colors.borderSubtle,
     ...cardShadow(),
