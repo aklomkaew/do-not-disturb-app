@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
 import { cupidTheme, cardShadow } from '@/constants/theme';
@@ -33,6 +33,7 @@ export function ProfileEditorScreen() {
   const [error, setError] = useState<string | null>(null);
   const [photos, setPhotos] = useState<string[]>(route.params.profile.photos ?? []);
   const [uploading, setUploading] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const pickPhotos = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -112,10 +113,12 @@ export function ProfileEditorScreen() {
   };
 
   const confirmCancel = () => {
-    Alert.alert('Discard changes?', 'If you go back now, your edits will be lost.', [
-      { text: 'Keep editing', style: 'cancel' },
-      { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
-    ]);
+    setConfirmingCancel(true);
+  };
+
+  const handleDiscardChanges = () => {
+    setConfirmingCancel(false);
+    navigation.goBack();
   };
 
   return (
@@ -215,6 +218,22 @@ export function ProfileEditorScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      <Modal visible={confirmingCancel} transparent animationType="fade" onRequestClose={() => setConfirmingCancel(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Discard changes?</Text>
+            <Text style={styles.modalCopy}>If you leave now, any edits you made will be lost.</Text>
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.modalSecondary} onPress={() => setConfirmingCancel(false)}>
+                <Text style={styles.modalSecondaryLabel}>Keep editing</Text>
+              </Pressable>
+              <Pressable style={styles.modalPrimary} onPress={handleDiscardChanges}>
+                <Text style={styles.modalPrimaryLabel}>Discard</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -410,6 +429,59 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 16,
     letterSpacing: 0.4,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    borderRadius: cupidTheme.radii.xl,
+    backgroundColor: cupidTheme.colors.surface,
+    padding: 24,
+    gap: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: cupidTheme.colors.textPrimary,
+  },
+  modalCopy: {
+    color: cupidTheme.colors.textSecondary,
+    lineHeight: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  modalSecondary: {
+    flex: 1,
+    borderRadius: cupidTheme.radii.lg,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.border,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+  },
+  modalSecondaryLabel: {
+    color: cupidTheme.colors.textSecondary,
+    fontWeight: '700',
+  },
+  modalPrimary: {
+    flex: 1,
+    borderRadius: cupidTheme.radii.lg,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: cupidTheme.colors.accent,
+    ...cardShadow('floating'),
+  },
+  modalPrimaryLabel: {
+    color: cupidTheme.colors.surface,
+    fontWeight: '800',
   },
 });
 
