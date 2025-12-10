@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { usePreferredName } from '@/hooks/usePreferredName';
@@ -30,6 +30,8 @@ export function ProfileScreen() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async () => {
     if (!accessToken) {
@@ -83,21 +85,20 @@ export function ProfileScreen() {
   };
 
   const confirmDeleteAccount = () => {
-    Alert.alert('Delete account', 'Are you sure? Your account and matches will be permanently removed.', [
-      { text: 'No', style: 'cancel' },
-      { text: 'Yes, delete it', style: 'destructive', onPress: () => deleteAccount().catch(() => undefined) },
-    ]);
+    setDeleteError(null);
+    setConfirmingDelete(true);
   };
 
   const deleteAccount = async () => {
     if (!accessToken) {
-      Alert.alert('Delete account', 'Session expired. Please log in again.');
       await logout().catch(() => undefined);
+      setConfirmingDelete(false);
       return;
     }
 
     try {
       setDeleting(true);
+      setDeleteError(null);
       const response = await fetch(`${API_BASE_URL}/api/profile/me`, {
         method: 'DELETE',
         headers: {
@@ -110,8 +111,9 @@ export function ProfileScreen() {
       }
 
       await logout();
+      setConfirmingDelete(false);
     } catch (err) {
-      Alert.alert('Delete failed', err instanceof Error ? err.message : 'Unable to delete the account right now.');
+      setDeleteError(err instanceof Error ? err.message : 'Unable to delete the account right now.');
     } finally {
       setDeleting(false);
     }
@@ -178,6 +180,27 @@ export function ProfileScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <Modal visible={confirmingDelete} transparent animationType="fade" onRequestClose={() => setConfirmingDelete(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Ionicons name="warning-outline" size={32} color={cupidTheme.colors.error} />
+            <Text style={styles.modalTitle}>Delete your account?</Text>
+            <Text style={styles.modalCopy}>
+              This removes your profile, matches, and any appearances in Explore for everyone. This cannot be undone.
+            </Text>
+            {deleteError ? <Text style={styles.modalError}>{deleteError}</Text> : null}
+            <View style={styles.modalActions}>
+              <Pressable style={styles.modalSecondary} onPress={() => setConfirmingDelete(false)} disabled={deleting}>
+                <Text style={styles.modalSecondaryLabel}>Keep account</Text>
+              </Pressable>
+              <Pressable style={[styles.modalPrimary, deleting && styles.buttonDisabled]} onPress={deleteAccount} disabled={deleting}>
+                <Text style={styles.modalPrimaryLabel}>{deleting ? 'Deleting…' : 'Delete'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -310,24 +333,63 @@ const styles = StyleSheet.create({
   errorText: {
     color: cupidTheme.colors.error,
   },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: cupidTheme.colors.surface,
+    borderRadius: cupidTheme.radii.xl,
+    padding: 24,
+    gap: 12,
+    ...cardShadow(),
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: cupidTheme.colors.textPrimary,
+  },
+  modalCopy: {
+    color: cupidTheme.colors.textSecondary,
+    lineHeight: 20,
+  },
+  modalError: {
+    color: cupidTheme.colors.error,
+    fontWeight: '600',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalSecondary: {
+    flex: 1,
+    borderRadius: cupidTheme.radii.lg,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.border,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+  },
+  modalSecondaryLabel: {
+    color: cupidTheme.colors.textSecondary,
+    fontWeight: '700',
+  },
+  modalPrimary: {
+    flex: 1,
+    borderRadius: cupidTheme.radii.lg,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: cupidTheme.colors.error,
+    ...cardShadow('floating'),
+  },
+  modalPrimaryLabel: {
+    color: cupidTheme.colors.surface,
+    fontWeight: '800',
+  },
 });
-
-function AccountPill({ icon, label, highlight }: { icon: keyof typeof Ionicons.glyphMap; label: string; highlight?: boolean }) {
-  return (
-    <View
-      style={[
-        pillStyles.pill,
-        highlight && {
-          borderColor: cupidTheme.colors.accent,
-          backgroundColor: cupidTheme.colors.accentSoft,
-        },
-      ]}
-    >
-      <Ionicons name={icon} size={14} color={highlight ? cupidTheme.colors.accent : cupidTheme.colors.textMuted} />
-      <Text style={[pillStyles.label, highlight && { color: cupidTheme.colors.textPrimary }]}>{label}</Text>
-    </View>
-  );
-}
 
 async function extractError(response: Response) {
   try {
