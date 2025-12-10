@@ -6,6 +6,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { updateMatchesCount } from '@/hooks/useMatchesCount';
 
 type MatchItem = {
   id: string;
@@ -53,7 +54,9 @@ export function MatchesScreen() {
         }
 
         const data = await response.json();
-        setMatches(data.matches ?? []);
+        const nextMatches = data.matches ?? [];
+        setMatches(nextMatches);
+        updateMatchesCount(nextMatches.length);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load matches');
       } finally {
