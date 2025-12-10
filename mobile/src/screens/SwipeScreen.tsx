@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 type DeckProfile = {
   id: string;
@@ -141,11 +142,13 @@ export function SwipeScreen() {
         />
       ) : (
         <View style={styles.stateCard}>
+          <Ionicons name="sparkles-outline" size={26} color={cupidTheme.colors.accent} />
           <Text style={styles.heading}>You’re all caught up!</Text>
           <Text style={styles.copy}>We’ll notify you as soon as new profiles arrive.</Text>
           <Pressable style={styles.secondaryButton} onPress={fetchDeck}>
             <Text style={styles.secondaryButtonLabel}>Refresh</Text>
           </Pressable>
+          <Text style={styles.tipLabel}>Tip: Update your profile to unlock fresh batches faster.</Text>
         </View>
       )}
     </ScreenContainer>
@@ -168,6 +171,12 @@ function ProfileCard({
   const photos = profile.photos ?? [];
   const hasPhotos = photos.length > 0;
   const width = Dimensions.get('window').width - 32;
+  const bioLength = profile.bio.length;
+  const tags = [
+    profile.location ?? 'Location TBD',
+    `${profile.age} yrs`,
+    bioLength > 160 ? 'Thoughtful storyteller' : 'Concise communicator',
+  ];
 
   return (
     <View style={styles.card}>
@@ -184,22 +193,32 @@ function ProfileCard({
           {profile.displayName}, {profile.age}
         </Text>
         <Text style={styles.location}>{profile.location ?? 'Somewhere on Earth'}</Text>
-        <Text style={styles.bio} numberOfLines={4}>
+        <View style={styles.tagRow}>
+          {tags.map((tag, idx) => (
+            <View key={`${tag}-${idx}`} style={styles.tag}>
+              <Text style={styles.tagLabel}>{tag}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={styles.bio} numberOfLines={5}>
           {profile.bio}
         </Text>
       </View>
 
       <View style={styles.actions}>
         <Pressable style={[styles.actionButton, styles.passButton]} onPress={onPass} disabled={actionLoading}>
+          <Ionicons name="close" size={20} color={cupidTheme.colors.textPrimary} />
           <Text style={styles.actionLabel}>Pass</Text>
         </Pressable>
         <Pressable style={[styles.actionButton, styles.likeButton]} onPress={onLike} disabled={actionLoading}>
+          <Ionicons name="heart" size={20} color={cupidTheme.colors.surface} />
           <Text style={[styles.actionLabel, styles.actionLabelContrast]}>Like</Text>
         </Pressable>
       </View>
 
       <Pressable style={styles.rewindButton} onPress={onRewind} disabled={actionLoading}>
-        <Text style={styles.rewindLabel}>Rewind</Text>
+        <Ionicons name="play-back" size={18} color={cupidTheme.colors.accentSecondary} />
+        <Text style={styles.rewindLabel}>Rewind last swipe</Text>
       </Pressable>
     </View>
   );
@@ -279,6 +298,25 @@ const styles = StyleSheet.create({
   textOverlay: {
     gap: 6,
   },
+  tagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginVertical: 6,
+  },
+  tag: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: cupidTheme.radii.pill,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+  },
+  tagLabel: {
+    color: cupidTheme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
+  },
   location: {
     color: cupidTheme.colors.textSecondary,
   },
@@ -304,6 +342,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: cupidTheme.radii.lg,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
   },
   passButton: {
     backgroundColor: cupidTheme.colors.surfaceMuted,
@@ -324,6 +365,9 @@ const styles = StyleSheet.create({
   rewindButton: {
     marginTop: 12,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
     paddingVertical: 12,
     borderRadius: cupidTheme.radii.lg,
     borderWidth: 1,
@@ -361,6 +405,10 @@ const styles = StyleSheet.create({
   secondaryButtonLabel: {
     color: cupidTheme.colors.accent,
     fontWeight: '700',
+  },
+  tipLabel: {
+    color: cupidTheme.colors.textMuted,
+    fontSize: 12,
   },
 });
 

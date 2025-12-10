@@ -1,4 +1,3 @@
-import { MessagesScreen } from '@/screens/MessagesScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { SwipeScreen } from '@/screens/SwipeScreen';
 import { MatchesScreen } from '@/screens/MatchesScreen';
@@ -38,7 +37,6 @@ export function RootNavigator() {
     >
       <Tab.Screen name="Swipe" component={SwipeScreen} />
       <Tab.Screen name="Matches" component={MatchesScreen} />
-      <Tab.Screen name="Messages" component={MessagesScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
       {enableAdminTab && <Tab.Screen name="Admin" component={AdminScreen} />}
     </Tab.Navigator>
@@ -51,8 +49,6 @@ function iconForRoute(routeName: string): keyof typeof Ionicons.glyphMap {
       return 'flame-outline';
     case 'Matches':
       return 'heart-outline';
-    case 'Messages':
-      return 'chatbubble-ellipses-outline';
     case 'Profile':
       return 'person-circle-outline';
     case 'Admin':

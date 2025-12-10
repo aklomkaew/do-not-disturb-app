@@ -7,6 +7,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -16,7 +17,7 @@ type ProfileResponse = {
   gender: string;
   relationshipStatus: string;
   bio: string;
-  location: string | null;
+  instagramHandle: string | null;
   matchNotificationsEnabled: boolean;
   photos: string[];
 };
@@ -56,7 +57,7 @@ export function ProfileScreen() {
         gender: data.profile.gender,
         relationshipStatus: data.profile.relationshipStatus,
         bio: data.profile.bio,
-        location: data.profile.location,
+        instagramHandle: data.profile.instagramHandle ?? null,
         matchNotificationsEnabled: data.profile.matchNotificationsEnabled ?? true,
         photos: data.profile.media?.photos ?? [],
       };
@@ -116,6 +117,7 @@ export function ProfileScreen() {
   };
 
   const primaryPhoto = profile?.photos?.[0];
+  const secondaryPhotos = profile?.photos?.slice(1) ?? [];
 
   return (
     <ScreenContainer scrollable={false}>
@@ -140,28 +142,28 @@ export function ProfileScreen() {
               <Detail label="Age" value={String(profile.age)} />
               <Detail label="Gender" value={formatLabel(profile.gender)} />
               <Detail label="Relationship status" value={formatLabel(profile.relationshipStatus)} />
-              <Detail label="Location" value={profile.location ?? 'Not set'} />
+              <Detail label="Instagram" value={profile.instagramHandle ? `@${profile.instagramHandle.replace(/^@/, '')}` : 'Not provided'} />
+              <Detail label="Match notifications" value={profile.matchNotificationsEnabled ? 'Enabled' : 'Disabled'} />
               <View style={styles.bioBlock}>
                 <Text style={styles.metaLabel}>Bio</Text>
                 <Text style={styles.bio}>{profile.bio}</Text>
               </View>
+              {secondaryPhotos.length > 0 ? (
+                <View style={styles.photoStrip}>
+                  {secondaryPhotos.map((uri) => (
+                    <Image key={uri} source={{ uri }} style={styles.photoThumb} />
+                  ))}
+                </View>
+              ) : null}
             </View>
           ) : null}
-
-          <View style={styles.meta}>
-            <Text style={styles.metaLabel}>Account ID</Text>
-            <Text style={styles.metaValue}>{user?.id}</Text>
-            <Text style={styles.metaLabel}>Role</Text>
-            <Text style={styles.metaValue}>{user?.role ?? 'USER'}</Text>
-            <Text style={styles.metaLabel}>Allowlisted</Text>
-            <Text style={styles.metaValue}>{user?.allowlisted ? 'Yes' : 'No'}</Text>
-          </View>
 
           <View style={styles.actions}>
             <Pressable style={styles.secondaryButton} onPress={handleEdit} disabled={!profile}>
               <Text style={styles.secondaryButtonLabel}>Edit profile</Text>
             </Pressable>
             <Pressable style={[styles.button, deleting && styles.buttonDisabled]} onPress={confirmDeleteAccount} disabled={deleting}>
+              <Ionicons name="trash-outline" size={18} color={cupidTheme.colors.surface} />
               <Text style={styles.buttonLabel}>{deleting ? 'Deleting…' : 'Delete account'}</Text>
             </Pressable>
           </View>
@@ -187,6 +189,8 @@ function formatLabel(value: string) {
 const styles = StyleSheet.create({
   container: {
     paddingBottom: 36,
+    paddingHorizontal: 16,
+    gap: 16,
   },
   card: {
     padding: 22,
@@ -220,10 +224,6 @@ const styles = StyleSheet.create({
   detailRow: {
     gap: 4,
   },
-  meta: {
-    marginTop: 16,
-    gap: 4,
-  },
   metaLabel: {
     color: cupidTheme.colors.textMuted,
     fontSize: 12,
@@ -243,6 +243,17 @@ const styles = StyleSheet.create({
     color: cupidTheme.colors.textSecondary,
     lineHeight: 20,
   },
+  photoStrip: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  photoThumb: {
+    width: 96,
+    height: 120,
+    borderRadius: cupidTheme.radii.md,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+  },
   actions: {
     marginTop: 18,
     gap: 10,
@@ -252,6 +263,9 @@ const styles = StyleSheet.create({
     backgroundColor: cupidTheme.colors.error,
     paddingVertical: 14,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
     ...cardShadow('floating'),
   },
   buttonDisabled: {
@@ -283,6 +297,23 @@ const styles = StyleSheet.create({
     color: cupidTheme.colors.error,
   },
 });
+
+function AccountPill({ icon, label, highlight }: { icon: keyof typeof Ionicons.glyphMap; label: string; highlight?: boolean }) {
+  return (
+    <View
+      style={[
+        pillStyles.pill,
+        highlight && {
+          borderColor: cupidTheme.colors.accent,
+          backgroundColor: cupidTheme.colors.accentSoft,
+        },
+      ]}
+    >
+      <Ionicons name={icon} size={14} color={highlight ? cupidTheme.colors.accent : cupidTheme.colors.textMuted} />
+      <Text style={[pillStyles.label, highlight && { color: cupidTheme.colors.textPrimary }]}>{label}</Text>
+    </View>
+  );
+}
 
 async function extractError(response: Response) {
   try {
