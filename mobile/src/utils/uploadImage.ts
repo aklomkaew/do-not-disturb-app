@@ -1,5 +1,4 @@
 import { API_BASE_URL } from '@/constants/config';
-import { File } from 'expo-file-system';
 
 type UploadResponse = {
   uploadUrl: string;
@@ -8,7 +7,6 @@ type UploadResponse = {
 
 type UploadResult = {
   path: string;
-  previewUrl: string | null;
   previewUrl: string | null;
 };
 
@@ -54,7 +52,6 @@ export async function uploadImage({ assetUri, accessToken, filename }: UploadIma
     throw new Error(`Failed to upload image (${uploadResponse.status})`);
   }
 
-  const previewUrl = await requestPhotoPreview(data.path, accessToken);
   let previewUrl: string | null = null;
   try {
     previewUrl = await requestPhotoPreview(data.path, accessToken);
@@ -72,14 +69,7 @@ function guessMimeType(name: string) {
 }
 
 async function resolveUploadBody(uri: string): Promise<Blob> {
-  if (uri.startsWith('file://') || uri.startsWith('content://')) {
-    const file = new File(uri);
-    if (!file.exists) {
-      throw new Error('Selected file could not be found on device.');
-    }
-    return file;
-  }
-
+  // In React Native, fetch() can handle file:// and content:// URIs
   const response = await fetch(uri);
   if (!response.ok) {
     throw new Error('Unable to read selected file.');

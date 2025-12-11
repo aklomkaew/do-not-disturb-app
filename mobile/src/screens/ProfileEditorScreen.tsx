@@ -4,12 +4,13 @@ import type { AuthStackParamList } from '@/navigation/AuthenticatedNavigator';
 import { useAuth } from '@/hooks/useAuth';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { useState, useMemo } from 'react';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
 import { PhotoEntry, hydratePhotoEntries, mergePhotoEntries, partitionSupportedAssets } from '@/utils/photoHelpers';
 import { cupidTheme, cardShadow } from '@/constants/theme';
+import { updatePreferredName } from '@/hooks/usePreferredName';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList, 'ProfileEditor'>;
 type Route = RouteProp<AuthStackParamList, 'ProfileEditor'>;
@@ -22,18 +23,59 @@ export function ProfileEditorScreen() {
   const route = useRoute<Route>();
   const { getAccessToken } = useAuth();
 
-  const [displayName, setDisplayName] = useState(route.params.profile.displayName);
-  const [age, setAge] = useState(String(route.params.profile.age ?? ''));
-  const [gender, setGender] = useState(route.params.profile.gender);
-  const [relationshipStatus, setRelationshipStatus] = useState(route.params.profile.relationshipStatus);
-  const [bio, setBio] = useState(route.params.profile.bio ?? '');
-  const [location, setLocation] = useState(route.params.profile.location ?? '');
-  const [notifyMatches, setNotifyMatches] = useState(route.params.profile.matchNotificationsEnabled);
+  const initialProfile = route.params.profile;
+  const [displayName, setDisplayName] = useState(initialProfile.displayName);
+  const [age, setAge] = useState(String(initialProfile.age ?? ''));
+  const [gender, setGender] = useState(initialProfile.gender);
+  const [relationshipStatus, setRelationshipStatus] = useState(initialProfile.relationshipStatus);
+  const [bio, setBio] = useState(initialProfile.bio ?? '');
+  const [instagramHandle, setInstagramHandle] = useState(initialProfile.instagramHandle ?? '');
+  const [notifyMatches, setNotifyMatches] = useState(initialProfile.matchNotificationsEnabled);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const initialPhotos = hydratePhotoEntries(route.params.profile.photoPaths, route.params.profile.photos);
+  const initialPhotos = hydratePhotoEntries(initialProfile.photoPaths, initialProfile.photos);
   const [photos, setPhotos] = useState<PhotoEntry[]>(initialPhotos);
   const [uploading, setUploading] = useState(false);
+
+  // Track if changes were made
+  const hasChanges = useMemo(() => {
+    const initialAge = String(initialProfile.age ?? '');
+    const initialPhotosPaths = initialPhotos.map((p) => p.path).sort().join(',');
+    const currentPhotosPaths = photos.map((p) => p.path).sort().join(',');
+    
+    return (
+      displayName.trim() !== initialProfile.displayName.trim() ||
+      age.trim() !== initialAge.trim() ||
+      gender !== initialProfile.gender ||
+      relationshipStatus !== initialProfile.relationshipStatus ||
+      bio.trim() !== (initialProfile.bio ?? '').trim() ||
+      (instagramHandle.trim() !== (initialProfile.instagramHandle ?? '').trim()) ||
+      notifyMatches !== initialProfile.matchNotificationsEnabled ||
+      initialPhotosPaths !== currentPhotosPaths
+    );
+  }, [displayName, age, gender, relationshipStatus, bio, instagramHandle, notifyMatches, photos, initialProfile, initialPhotos]);
+
+  const handleInstagramChange = (text: string) => {
+    // Remove @ if user tries to add it, we'll add it automatically
+    const cleaned = text.replace(/^@+/, '');
+    setInstagramHandle(cleaned);
+  };
+
+  const handleCancel = () => {
+    if (!hasChanges) {
+      navigation.goBack();
+      return;
+    }
+
+    Alert.alert(
+      'Discard changes?',
+      'You have unsaved changes. Are you sure you want to discard them?',
+      [
+        { text: 'Keep editing', style: 'cancel' },
+        { text: 'Discard changes', style: 'destructive', onPress: () => navigation.goBack() },
+      ]
+    );
+  };
 
   const pickPhotos = async () => {
     setError(null);
@@ -96,7 +138,7 @@ export function ProfileEditorScreen() {
         gender,
         relationshipStatus,
         bio: bio.trim(),
-        location: location.trim(),
+        instagramHandle: instagramHandle.trim() || null,
         matchNotificationsEnabled: notifyMatches,
         media: { photos: photos.map((photo) => photo.path) },
       };
@@ -118,6 +160,10 @@ export function ProfileEditorScreen() {
         throw new Error(await extractError(response));
       }
 
+      // Update preferred name cache for immediate UI updates
+      updatePreferredName(displayName.trim());
+
+      // Navigate back - this will trigger useFocusEffect in ProfileScreen to refresh
       navigation.goBack();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update profile');
@@ -129,21 +175,36 @@ export function ProfileEditorScreen() {
   return (
     <ScreenContainer scrollable={false}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.heading}>Edit profile</Text>
+        <View style={styles.header}>
+          <Text style={styles.heading}>Edit profile</Text>
+          <Pressable onPress={handleCancel} style={styles.cancelButton}>
+            <Text style={styles.cancelLabel}>Cancel</Text>
+          </Pressable>
+        </View>
         <Text style={styles.subheading}>Update your basic details anytime.</Text>
 
         <Text style={styles.label}>Photos (first is your profile picture)</Text>
         <Text style={styles.helper}>{uploading ? 'Uploading...' : 'Add up to 5 (3 recommended).'}</Text>
         <View style={styles.photoRow}>
-          {photos.map((photo, idx) => (
-            <View key={photo.path} style={styles.photoItem}>
-              <Image source={{ uri: photo.url ?? photo.path }} style={styles.photo} />
-              <Pressable style={styles.photoRemove} onPress={() => handleRemovePhoto(photo.path)} accessibilityLabel="Remove photo">
-                <Text style={styles.photoRemoveLabel}>×</Text>
-              </Pressable>
-              <Text style={styles.photoBadge}>{idx === 0 ? 'Profile' : `#${idx + 1}`}</Text>
-            </View>
-          ))}
+          {photos.map((photo, idx) => {
+            // Ensure we have a valid URL - use url if available, otherwise try path as URL, fallback to empty
+            const photoUri = photo.url || (photo.path.startsWith('http') ? photo.path : null);
+            return (
+              <View key={photo.path} style={styles.photoItem}>
+                {photoUri ? (
+                  <Image source={{ uri: photoUri }} style={styles.photo} />
+                ) : (
+                  <View style={[styles.photo, styles.photoPlaceholder]}>
+                    <Text style={styles.photoPlaceholderText}>Photo</Text>
+                  </View>
+                )}
+                <Pressable style={styles.photoRemove} onPress={() => handleRemovePhoto(photo.path)} accessibilityLabel="Remove photo">
+                  <Text style={styles.photoRemoveLabel}>×</Text>
+                </Pressable>
+                <Text style={styles.photoBadge}>{idx === 0 ? 'Profile' : `#${idx + 1}`}</Text>
+              </View>
+            );
+          })}
           {photos.length < 5 ? (
             <Pressable style={styles.photoAdd} onPress={pickPhotos} disabled={submitting}>
               <Text style={styles.photoAddLabel}>+ Add</Text>
@@ -176,21 +237,27 @@ export function ProfileEditorScreen() {
         <Text style={styles.label}>Relationship status</Text>
         <OptionGroup options={relationshipOptions} value={relationshipStatus} onChange={setRelationshipStatus} />
 
-        <Text style={styles.label}>Location</Text>
-        <TextInput
-          style={styles.input}
-          value={location}
-          onChangeText={setLocation}
-          placeholder="City, Country"
-          placeholderTextColor={cupidTheme.colors.textMuted}
-        />
+        <Text style={styles.label}>Instagram handle</Text>
+        <View style={styles.instagramContainer}>
+          <Text style={styles.instagramPrefix}>@</Text>
+          <TextInput
+            style={[styles.input, styles.instagramInput]}
+            value={instagramHandle}
+            onChangeText={handleInstagramChange}
+            placeholder="username"
+            placeholderTextColor={cupidTheme.colors.textMuted}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
 
         <Text style={styles.label}>Bio</Text>
+        <Text style={styles.helper}>Share a little bit about yourself. 3 adjectives to describe yourself / interests, why should you date me, etc.</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           value={bio}
           onChangeText={setBio}
-          placeholder="Share a little about yourself"
+          placeholder="Share a little bit about yourself. 3 adjectives to describe yourself / interests, why should you date me, etc."
           placeholderTextColor={cupidTheme.colors.textMuted}
           multiline
           numberOfLines={4}
@@ -253,14 +320,50 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingBottom: 44,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   heading: {
     fontSize: 26,
     fontWeight: '800',
     color: cupidTheme.colors.textPrimary,
+    flex: 1,
+  },
+  cancelButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  cancelLabel: {
+    color: cupidTheme.colors.accent,
+    fontWeight: '700',
+    fontSize: 16,
   },
   subheading: {
     color: cupidTheme.colors.textSecondary,
     marginBottom: 8,
+  },
+  instagramContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    borderRadius: cupidTheme.radii.lg,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.border,
+    paddingLeft: 18,
+  },
+  instagramPrefix: {
+    color: cupidTheme.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  instagramInput: {
+    flex: 1,
+    borderWidth: 0,
+    paddingLeft: 4,
+    margin: 0,
   },
   helper: {
     color: cupidTheme.colors.textMuted,
@@ -306,6 +409,16 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: '100%',
+  },
+  photoPlaceholder: {
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoPlaceholderText: {
+    color: cupidTheme.colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
   },
   photoRemove: {
     position: 'absolute',

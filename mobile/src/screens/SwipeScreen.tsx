@@ -138,19 +138,26 @@ export function SwipeScreen() {
           </Pressable>
         </View>
       ) : currentProfile ? (
-        <ProfileCard
-          profile={currentProfile}
-          onPass={() => handleSwipe('LEFT')}
-          onLike={() => handleSwipe('RIGHT')}
-          onRewind={handleRewind}
-          actionLoading={actionLoading}
-        />
+        <>
+          <ProfileCard
+            profile={currentProfile}
+            onPass={() => handleSwipe('LEFT')}
+            onLike={() => handleSwipe('RIGHT')}
+            actionLoading={actionLoading}
+          />
+          <Pressable style={styles.rewindButton} onPress={handleRewind} disabled={actionLoading}>
+            <Text style={styles.rewindLabel}>Rewind</Text>
+          </Pressable>
+        </>
       ) : (
         <View style={styles.stateCard}>
-          <Text style={styles.heading}>You’re all caught up!</Text>
-          <Text style={styles.copy}>We’ll notify you as soon as new profiles arrive.</Text>
+          <Text style={styles.heading}>You're all caught up!</Text>
+          <Text style={styles.copy}>We'll notify you as soon as new profiles arrive.</Text>
           <Pressable style={styles.secondaryButton} onPress={fetchDeck}>
             <Text style={styles.secondaryButtonLabel}>Refresh</Text>
+          </Pressable>
+          <Pressable style={styles.rewindButton} onPress={handleRewind} disabled={actionLoading}>
+            <Text style={styles.rewindLabel}>Rewind</Text>
           </Pressable>
         </View>
       )}
@@ -162,13 +169,11 @@ function ProfileCard({
   profile,
   onPass,
   onLike,
-  onRewind,
   actionLoading,
 }: {
   profile: DeckProfile;
   onPass: () => void;
   onLike: () => void;
-  onRewind: () => void;
   actionLoading: boolean;
 }) {
   const photos = profile.photos ?? [];
@@ -203,10 +208,6 @@ function ProfileCard({
           <Text style={[styles.actionLabel, styles.actionLabelContrast]}>Like</Text>
         </Pressable>
       </View>
-
-      <Pressable style={styles.rewindButton} onPress={onRewind} disabled={actionLoading}>
-        <Text style={styles.rewindLabel}>Rewind</Text>
-      </Pressable>
     </View>
   );
 }
@@ -293,7 +294,8 @@ const styles = StyleSheet.create({
     color: cupidTheme.colors.surface,
   },
   rewindButton: {
-    marginTop: 12,
+    marginTop: 16,
+    marginHorizontal: 16,
     alignItems: 'center',
     paddingVertical: 12,
     borderRadius: cupidTheme.radii.lg,

@@ -19,6 +19,7 @@ export type ProfilePayload = {
   gender: string;
   relationshipStatus: string;
   bio: string;
+  location: string | null;
   instagramHandle: string | null;
   matchNotificationsEnabled: boolean;
   photos: string[];

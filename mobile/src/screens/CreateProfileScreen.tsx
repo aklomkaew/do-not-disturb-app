@@ -156,15 +156,25 @@ export function CreateProfileScreen() {
           <Text style={styles.label}>Photos (first is your profile picture)</Text>
           <Text style={styles.helper}>{uploading ? 'Uploading...' : 'Add up to 5 (3 recommended).'}</Text>
           <View style={styles.photoRow}>
-            {photos.map((photo, idx) => (
-              <View key={photo.path} style={styles.photoItem}>
-                <Image source={{ uri: photo.url ?? photo.path }} style={styles.photo} />
-                <Pressable style={styles.photoRemove} onPress={() => handleRemovePhoto(photo.path)} accessibilityLabel="Remove photo">
-                  <Text style={styles.photoRemoveLabel}>×</Text>
-                </Pressable>
-                <Text style={styles.photoBadge}>{idx === 0 ? 'Profile' : `#${idx + 1}`}</Text>
-              </View>
-            ))}
+            {photos.map((photo, idx) => {
+              // Ensure we have a valid URL - use url if available, otherwise try path as URL, fallback to empty
+              const photoUri = photo.url || (photo.path.startsWith('http') ? photo.path : null);
+              return (
+                <View key={photo.path} style={styles.photoItem}>
+                  {photoUri ? (
+                    <Image source={{ uri: photoUri }} style={styles.photo} />
+                  ) : (
+                    <View style={[styles.photo, styles.photoPlaceholder]}>
+                      <Text style={styles.photoPlaceholderText}>Photo</Text>
+                    </View>
+                  )}
+                  <Pressable style={styles.photoRemove} onPress={() => handleRemovePhoto(photo.path)} accessibilityLabel="Remove photo">
+                    <Text style={styles.photoRemoveLabel}>×</Text>
+                  </Pressable>
+                  <Text style={styles.photoBadge}>{idx === 0 ? 'Profile' : `#${idx + 1}`}</Text>
+                </View>
+              );
+            })}
             {photos.length < 5 ? (
               <Pressable style={styles.photoAdd} onPress={pickPhotos} disabled={submitting}>
                 <Text style={styles.photoAddLabel}>+ Add</Text>
@@ -227,11 +237,12 @@ export function CreateProfileScreen() {
           </View>
 
           <Text style={styles.label}>Bio</Text>
+          <Text style={styles.helper}>Share a little bit about yourself. 3 adjectives to describe yourself / interests, why should you date me, etc.</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             value={bio}
             onChangeText={setBio}
-            placeholder="Share what makes you tick, your boundaries, or your perfect Do Not Disturb day."
+            placeholder="Share a little bit about yourself. 3 adjectives to describe yourself / interests, why should you date me, etc."
             placeholderTextColor={cupidTheme.colors.textMuted}
             editable={!submitting}
             multiline
@@ -356,6 +367,16 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: '100%',
+  },
+  photoPlaceholder: {
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoPlaceholderText: {
+    color: cupidTheme.colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
   },
   photoRemove: {
     position: 'absolute',

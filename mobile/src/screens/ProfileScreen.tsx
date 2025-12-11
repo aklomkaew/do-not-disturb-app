@@ -1,6 +1,5 @@
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { PhotoCarousel } from '@/components/PhotoCarousel';
-import { PhotoCarousel } from '@/components/PhotoCarousel';
 import { API_BASE_URL } from '@/constants/config';
 import type { AuthStackParamList } from '@/navigation/AuthenticatedNavigator';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,15 +17,13 @@ type ProfileResponse = {
   gender: string;
   relationshipStatus: string;
   bio: string;
-  location: string | null;
+  instagramHandle: string | null;
   matchNotificationsEnabled: boolean;
   photos: string[];
-  photoPaths: string[];
   photoPaths: string[];
 };
 
 export function ProfileScreen() {
-  const { user, logout, getAccessToken } = useAuth();
   const { user, logout, getAccessToken } = useAuth();
   const navigation = useNavigation<Navigation>();
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
@@ -58,7 +55,7 @@ export function ProfileScreen() {
         gender: data.profile.gender,
         relationshipStatus: data.profile.relationshipStatus,
         bio: data.profile.bio,
-        location: data.profile.location,
+        instagramHandle: data.profile.instagramHandle ?? null,
         matchNotificationsEnabled: data.profile.matchNotificationsEnabled ?? true,
         photos: data.profile.media?.photos ?? [],
         photoPaths: data.profile.media?.paths ?? [],
@@ -80,14 +77,46 @@ export function ProfileScreen() {
 
   const handleEdit = () => {
     if (!profile) return;
-    navigation.navigate('ProfileEditor', { profile });
+    navigation.navigate('ProfileEditor', {
+      profile: {
+        displayName: profile.displayName,
+        age: profile.age,
+        gender: profile.gender,
+        relationshipStatus: profile.relationshipStatus,
+        bio: profile.bio,
+        location: null, // Removed from UI
+        instagramHandle: profile.instagramHandle,
+        matchNotificationsEnabled: profile.matchNotificationsEnabled,
+        photos: profile.photos,
+        photoPaths: profile.photoPaths,
+      },
+    });
   };
 
   const confirmDeleteAccount = () => {
-    Alert.alert('Delete account', 'Are you sure? Your account and matches will be permanently removed.', [
-      { text: 'No', style: 'cancel' },
-      { text: 'Yes, delete it', style: 'destructive', onPress: () => deleteAccount().catch(() => undefined) },
-    ]);
+    Alert.alert(
+      'Delete account',
+      'Are you sure you want to delete your account? This action cannot be undone. Your account and all associated data (matches, messages, etc.) will be permanently removed from the database.',
+      [
+        { 
+          text: 'Cancel', 
+          style: 'cancel',
+          onPress: () => {
+            // User cancelled, do nothing
+          }
+        },
+        { 
+          text: 'Yes, delete it', 
+          style: 'destructive', 
+          onPress: () => {
+            deleteAccount().catch((err) => {
+              console.error('Delete account error:', err);
+            });
+          }
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   const deleteAccount = async () => {
@@ -154,22 +183,13 @@ export function ProfileScreen() {
               <Detail label="Age" value={String(profile.age)} />
               <Detail label="Gender" value={formatLabel(profile.gender)} />
               <Detail label="Relationship status" value={formatLabel(profile.relationshipStatus)} />
-              <Detail label="Location" value={profile.location ?? 'Not set'} />
+              <Detail label="Instagram handle" value={profile.instagramHandle ? `@${profile.instagramHandle}` : 'Not set'} />
               <View style={styles.bioBlock}>
                 <Text style={styles.metaLabel}>Bio</Text>
                 <Text style={styles.bio}>{profile.bio}</Text>
               </View>
             </View>
           ) : null}
-
-          <View style={styles.meta}>
-            <Text style={styles.metaLabel}>Account ID</Text>
-            <Text style={styles.metaValue}>{user?.id}</Text>
-            <Text style={styles.metaLabel}>Role</Text>
-            <Text style={styles.metaValue}>{user?.role ?? 'USER'}</Text>
-            <Text style={styles.metaLabel}>Allowlisted</Text>
-            <Text style={styles.metaValue}>{user?.allowlisted ? 'Yes' : 'No'}</Text>
-          </View>
 
           <View style={styles.actions}>
             <Pressable style={styles.secondaryButton} onPress={handleEdit} disabled={!profile}>
@@ -207,6 +227,10 @@ const styles = StyleSheet.create({
     borderRadius: cupidTheme.radii.xl,
     backgroundColor: cupidTheme.colors.surface,
     gap: 14,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+    ...cardShadow(),
+  },
   gallery: {
     gap: 8,
     marginBottom: 8,
@@ -232,10 +256,6 @@ const styles = StyleSheet.create({
   photoFallbackText: {
     color: cupidTheme.colors.textMuted,
     fontWeight: '700',
-  },
-    borderWidth: 1,
-    borderColor: cupidTheme.colors.borderSubtle,
-    ...cardShadow(),
   },
   heading: {
     fontSize: 24,

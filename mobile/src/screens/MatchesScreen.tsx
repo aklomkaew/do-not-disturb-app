@@ -218,6 +218,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  photoFallback: {
+    height: 320,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   photoFallbackText: {
     color: cupidTheme.colors.textMuted,
     fontWeight: '700',
