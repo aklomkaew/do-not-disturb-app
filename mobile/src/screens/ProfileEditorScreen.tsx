@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState, useMemo } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
 import { PhotoEntry, hydratePhotoEntries, mergePhotoEntries, partitionSupportedAssets } from '@/utils/photoHelpers';
@@ -36,6 +36,7 @@ export function ProfileEditorScreen() {
   const initialPhotos = hydratePhotoEntries(initialProfile.photoPaths, initialProfile.photos);
   const [photos, setPhotos] = useState<PhotoEntry[]>(initialPhotos);
   const [uploading, setUploading] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   // Track if changes were made
   const hasChanges = useMemo(() => {
@@ -58,24 +59,58 @@ export function ProfileEditorScreen() {
   const handleInstagramChange = (text: string) => {
     // Remove @ if user tries to add it, we'll add it automatically
     const cleaned = text.replace(/^@+/, '');
-    console.log('Instagram handle input changed:', { original: text, cleaned, previousState: instagramHandle });
     setInstagramHandle(cleaned);
   };
 
   const handleCancel = () => {
     if (!hasChanges) {
+      // No changes made, just go back
       navigation.goBack();
       return;
     }
 
-    Alert.alert(
-      'Discard changes?',
-      'You have unsaved changes. Are you sure you want to discard them?',
-      [
-        { text: 'Keep editing', style: 'cancel' },
-        { text: 'Discard changes', style: 'destructive', onPress: () => navigation.goBack() },
-      ]
-    );
+    // Changes were made, show confirmation dialog
+    // Use Modal for web, Alert for native
+    if (Platform.OS === 'web') {
+      setShowCancelConfirm(true);
+    } else {
+      try {
+        Alert.alert(
+          'Discard changes?',
+          'You have unsaved changes. Are you sure you want to discard them? All modifications will be lost.',
+          [
+            { 
+              text: 'Keep editing', 
+              style: 'cancel',
+              onPress: () => {
+                // User chose to keep editing, do nothing
+              }
+            },
+            { 
+              text: 'Discard changes', 
+              style: 'destructive', 
+              onPress: () => {
+                // User confirmed, discard changes and go back
+                navigation.goBack();
+              }
+            },
+          ],
+          { cancelable: true }
+        );
+      } catch (error) {
+        // Fallback: use Modal
+        setShowCancelConfirm(true);
+      }
+    }
+  };
+
+  const handleCancelConfirm = () => {
+    setShowCancelConfirm(false);
+    navigation.goBack();
+  };
+
+  const handleCancelDismiss = () => {
+    setShowCancelConfirm(false);
   };
 
   const pickPhotos = async () => {
@@ -143,9 +178,6 @@ export function ProfileEditorScreen() {
         matchNotificationsEnabled: notifyMatches,
         media: { photos: photos.map((photo) => photo.path) },
       };
-      
-      console.log('Saving profile with payload:', JSON.stringify(payload, null, 2));
-      console.log('Instagram handle being saved:', instagramHandle.trim() || null);
 
       if (age.trim().length > 0) {
         payload.age = Number(age);
@@ -162,13 +194,10 @@ export function ProfileEditorScreen() {
 
       if (!response.ok) {
         const errorMsg = await extractError(response);
-        console.error('Profile update failed:', errorMsg);
         throw new Error(errorMsg);
       }
 
       const responseData = await response.json();
-      console.log('Profile update successful, response:', JSON.stringify(responseData, null, 2));
-      console.log('Instagram handle in response:', responseData?.profile?.instagramHandle);
 
       // Update preferred name cache for immediate UI updates
       updatePreferredName(displayName.trim());
@@ -291,10 +320,47 @@ export function ProfileEditorScreen() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Pressable style={[styles.button, submitting && styles.buttonDisabled]} onPress={handleSave} disabled={submitting}>
-          {submitting ? <ActivityIndicator color={cupidTheme.colors.surface} /> : <Text style={styles.buttonLabel}>Save changes</Text>}
-        </Pressable>
+        <View style={styles.actionButtons}>
+          <Pressable 
+            style={[styles.secondaryButton, styles.cancelButtonBottom]} 
+            onPress={handleCancel} 
+            disabled={submitting}
+          >
+            <Text style={styles.secondaryButtonLabel}>Cancel</Text>
+          </Pressable>
+          <Pressable 
+            style={[styles.button, submitting && styles.buttonDisabled]} 
+            onPress={handleSave} 
+            disabled={submitting}
+          >
+            {submitting ? <ActivityIndicator color={cupidTheme.colors.surface} /> : <Text style={styles.buttonLabel}>Save changes</Text>}
+          </Pressable>
+        </View>
       </ScrollView>
+
+      <Modal
+        visible={showCancelConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelDismiss}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Discard changes?</Text>
+            <Text style={styles.modalMessage}>
+              You have unsaved changes. Are you sure you want to discard them? All modifications will be lost.
+            </Text>
+            <View style={styles.modalActions}>
+              <Pressable style={styles.modalCancelButton} onPress={handleCancelDismiss}>
+                <Text style={styles.modalCancelLabel}>Keep editing</Text>
+              </Pressable>
+              <Pressable style={styles.modalDeleteButton} onPress={handleCancelConfirm}>
+                <Text style={styles.modalDeleteLabel}>Discard changes</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -508,8 +574,13 @@ const styles = StyleSheet.create({
   error: {
     color: cupidTheme.colors.error,
   },
-  button: {
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
     marginTop: 16,
+  },
+  button: {
+    flex: 1,
     backgroundColor: cupidTheme.colors.accent,
     borderRadius: cupidTheme.radii.lg,
     paddingVertical: 16,
@@ -524,6 +595,78 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 16,
     letterSpacing: 0.4,
+  },
+  secondaryButton: {
+    flex: 1,
+    borderRadius: cupidTheme.radii.lg,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.accent,
+    paddingVertical: 16,
+    alignItems: 'center',
+    backgroundColor: cupidTheme.colors.surface,
+  },
+  secondaryButtonLabel: {
+    color: cupidTheme.colors.accent,
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  cancelButtonBottom: {
+    // Additional styles for bottom cancel button if needed
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalCard: {
+    backgroundColor: cupidTheme.colors.surface,
+    borderRadius: cupidTheme.radii.xl,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    ...cardShadow('floating'),
+    gap: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: cupidTheme.colors.textPrimary,
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: cupidTheme.colors.textSecondary,
+    lineHeight: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalCancelButton: {
+    flex: 1,
+    borderRadius: cupidTheme.radii.lg,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+  },
+  modalCancelLabel: {
+    color: cupidTheme.colors.textPrimary,
+    fontWeight: '700',
+  },
+  modalDeleteButton: {
+    flex: 1,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.error,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalDeleteLabel: {
+    color: cupidTheme.colors.surface,
+    fontWeight: '800',
   },
 });
 

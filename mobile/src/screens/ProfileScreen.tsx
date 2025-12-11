@@ -50,8 +50,6 @@ export function ProfileScreen() {
       }
 
       const data = await response.json();
-      console.log('Profile fetched from API:', JSON.stringify(data, null, 2));
-      console.log('Instagram handle from API:', data.profile?.instagramHandle);
       
       const normalized: ProfileResponse = {
         displayName: data.profile.displayName,
@@ -64,9 +62,6 @@ export function ProfileScreen() {
         photos: data.profile.media?.photos ?? [],
         photoPaths: data.profile.media?.paths ?? [],
       };
-
-      console.log('Normalized profile:', JSON.stringify(normalized, null, 2));
-      console.log('Instagram handle in normalized profile:', normalized.instagramHandle);
       
       setProfile(normalized);
       setStatus('ready');
@@ -101,50 +96,38 @@ export function ProfileScreen() {
   };
 
   const confirmDeleteAccount = () => {
-    console.log('confirmDeleteAccount called, deleting state:', deleting);
-    
     if (deleting) {
-      console.log('Already deleting, returning early');
       return; // Prevent multiple simultaneous delete attempts
     }
     
     // Use Modal for web, Alert for native
     if (Platform.OS === 'web') {
-      console.log('Web platform detected, using Modal');
       setShowDeleteConfirm(true);
     } else {
       try {
-        console.log('About to show Alert.alert');
         Alert.alert(
           'Delete account',
           'Are you sure you want to delete your account? This action cannot be undone. Your account and all associated data (matches, messages, etc.) will be permanently removed from the database.',
           [
             { 
               text: 'Cancel', 
-              style: 'cancel',
-              onPress: () => {
-                console.log('Delete account cancelled by user');
-              }
+              style: 'cancel'
             },
             { 
               text: 'Yes, delete it', 
               style: 'destructive', 
               onPress: async () => {
-                console.log('Delete account confirmed by user');
                 try {
                   await deleteAccount();
                 } catch (err) {
-                  // Error is already handled in deleteAccount, but ensure it's caught
-                  console.error('Delete account promise rejection:', err);
+                  // Error is already handled in deleteAccount
                 }
               }
             },
           ],
           { cancelable: true }
         );
-        console.log('Alert.alert called successfully');
       } catch (error) {
-        console.error('Error showing Alert:', error);
         // Fallback: use Modal
         setShowDeleteConfirm(true);
       }
@@ -156,18 +139,16 @@ export function ProfileScreen() {
     try {
       await deleteAccount();
     } catch (err) {
-      console.error('Delete account promise rejection:', err);
+      // Error is already handled in deleteAccount
     }
   };
 
   const handleDeleteCancel = () => {
-    console.log('Delete account cancelled by user');
     setShowDeleteConfirm(false);
   };
 
   const deleteAccount = async () => {
     try {
-      console.log('Starting account deletion...');
       setDeleting(true);
       setError(null);
       
@@ -176,7 +157,6 @@ export function ProfileScreen() {
         throw new Error('No authentication token found. Please log in again.');
       }
 
-      console.log('Sending DELETE request to API...');
       const response = await fetch(`${API_BASE_URL}/api/profile/me`, {
         method: 'DELETE',
         headers: {
@@ -184,21 +164,15 @@ export function ProfileScreen() {
         },
       });
 
-      console.log('Delete response status:', response.status);
-
       if (!response.ok && response.status !== 204) {
         const errorMessage = await extractError(response);
-        console.error('Delete failed with error:', errorMessage);
         throw new Error(errorMessage);
       }
 
-      console.log('Account deleted successfully, logging out...');
       // Account deleted successfully - logout and navigate to login
       await logout();
-      console.log('Logout completed');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unable to delete the account right now.';
-      console.error('Delete account error:', err);
       
       Alert.alert(
         'Delete failed',
@@ -272,14 +246,9 @@ export function ProfileScreen() {
             </Pressable>
             <Pressable 
               style={[styles.button, deleting && styles.buttonDisabled]} 
-              onPress={(e) => {
-                e?.preventDefault?.();
-                console.log('Delete account button pressed - Platform:', Platform.OS);
-                console.log('Button disabled?', deleting);
+              onPress={() => {
                 if (!deleting) {
                   confirmDeleteAccount();
-                } else {
-                  console.log('Button is disabled, not calling confirmDeleteAccount');
                 }
               }} 
               disabled={deleting}
