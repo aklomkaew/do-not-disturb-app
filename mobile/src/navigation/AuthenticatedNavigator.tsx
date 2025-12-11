@@ -5,6 +5,7 @@ import { WelcomeScreen } from '@/screens/WelcomeScreen';
 import { DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { cupidTheme } from '@/constants/theme';
+import { MatchNotificationProvider } from '@/hooks/useMatchNotification';
 
 export type AuthStackParamList = {
   Welcome: undefined;
@@ -42,11 +43,13 @@ export const navigationTheme = {
 
 export function AuthenticatedNavigator() {
   return (
-    <Stack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Welcome" component={WelcomeScreen} />
-      <Stack.Screen name="CreateProfile" component={CreateProfileScreen} />
-      <Stack.Screen name="ProfileEditor" component={ProfileEditorScreen} />
-      <Stack.Screen name="MainTabs" component={RootNavigator} />
-    </Stack.Navigator>
+    <MatchNotificationProvider>
+      <Stack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Welcome" component={WelcomeScreen} />
+        <Stack.Screen name="CreateProfile" component={CreateProfileScreen} />
+        <Stack.Screen name="ProfileEditor" component={ProfileEditorScreen} />
+        <Stack.Screen name="MainTabs" component={RootNavigator} />
+      </Stack.Navigator>
+    </MatchNotificationProvider>
   );
 }

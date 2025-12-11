@@ -153,8 +153,19 @@ export function CreateProfileScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.label}>Photos (first is your profile picture)</Text>
-          <Text style={styles.helper}>{uploading ? 'Uploading...' : 'Add up to 5 (3 recommended).'}</Text>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Photos {photos.length === 0 && <Text style={{ color: cupidTheme.colors.error }}>*</Text>}</Text>
+            {photos.length > 0 && (
+              <Text style={styles.photoCount}>{photos.length}/5</Text>
+            )}
+          </View>
+          <Text style={styles.helper}>
+            {uploading 
+              ? 'Uploading photos...' 
+              : photos.length === 0
+              ? 'Add at least one photo to get started. Your first photo will be your profile picture.'
+              : 'Your first photo is your profile picture. Add up to 5 photos total (3 recommended for best results).'}
+          </Text>
           <View style={styles.photoRow}>
             {photos.map((photo, idx) => {
               // Ensure we have a valid URL - use url if available, otherwise try path as URL, fallback to empty
@@ -162,49 +173,87 @@ export function CreateProfileScreen() {
               return (
                 <View key={photo.path} style={styles.photoItem}>
                   {photoUri ? (
-                    <Image source={{ uri: photoUri }} style={styles.photo} />
+                    <Image 
+                      source={{ uri: photoUri }} 
+                      style={styles.photo}
+                      resizeMode="cover"
+                    />
                   ) : (
                     <View style={[styles.photo, styles.photoPlaceholder]}>
-                      <Text style={styles.photoPlaceholderText}>Photo</Text>
+                      <Text style={styles.photoPlaceholderText}>Loading...</Text>
                     </View>
                   )}
-                  <Pressable style={styles.photoRemove} onPress={() => handleRemovePhoto(photo.path)} accessibilityLabel="Remove photo">
+                  <Pressable 
+                    style={styles.photoRemove} 
+                    onPress={() => handleRemovePhoto(photo.path)} 
+                    accessibilityLabel="Remove photo"
+                    accessibilityHint="Removes this photo from your profile"
+                  >
                     <Text style={styles.photoRemoveLabel}>×</Text>
                   </Pressable>
-                  <Text style={styles.photoBadge}>{idx === 0 ? 'Profile' : `#${idx + 1}`}</Text>
+                  <View style={styles.photoBadge}>
+                    <Text style={styles.photoBadgeText}>{idx === 0 ? 'Profile' : `${idx + 1}`}</Text>
+                  </View>
                 </View>
               );
             })}
             {photos.length < 5 ? (
-              <Pressable style={styles.photoAdd} onPress={pickPhotos} disabled={submitting}>
+              <Pressable 
+                style={[styles.photoAdd, submitting && styles.photoAddDisabled]} 
+                onPress={pickPhotos} 
+                disabled={submitting || uploading}
+                accessibilityLabel="Add photo"
+                accessibilityHint="Add a new photo to your profile"
+              >
                 <Text style={styles.photoAddLabel}>+ Add</Text>
               </Pressable>
             ) : null}
           </View>
+          {photos.length === 0 && (
+            <Text style={styles.photoWarning}>At least one photo is required to create your profile.</Text>
+          )}
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.label}>Display name</Text>
+          <Text style={styles.label}>Display name <Text style={{ color: cupidTheme.colors.error }}>*</Text></Text>
+          <Text style={styles.helper}>This is how others will see you on the app.</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, displayName.trim().length > 0 && displayName.trim().length < 2 && styles.inputError]}
             value={displayName}
-            onChangeText={setDisplayName}
+            onChangeText={(text) => {
+              setDisplayName(text);
+              if (error && error.includes('Display name')) setError(null);
+            }}
             placeholder="Alex"
             placeholderTextColor={cupidTheme.colors.textMuted}
             autoCapitalize="words"
             editable={!submitting}
+            maxLength={30}
           />
+          {displayName.trim().length > 0 && displayName.trim().length < 2 && (
+            <Text style={styles.fieldError}>Display name must be at least 2 characters</Text>
+          )}
 
-          <Text style={styles.label}>Age</Text>
+          <Text style={styles.label}>Age <Text style={{ color: cupidTheme.colors.error }}>*</Text></Text>
+          <Text style={styles.helper}>You must be 18 or older to join.</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, age.length > 0 && (!Number.isFinite(Number(age)) || Number(age) < 18) && styles.inputError]}
             value={age}
-            onChangeText={setAge}
+            onChangeText={(text) => {
+              // Only allow numbers
+              const numericText = text.replace(/[^0-9]/g, '');
+              setAge(numericText);
+              if (error && error.includes('age')) setError(null);
+            }}
             placeholder="27"
             placeholderTextColor={cupidTheme.colors.textMuted}
             keyboardType="number-pad"
             editable={!submitting}
+            maxLength={3}
           />
+          {age.length > 0 && (!Number.isFinite(Number(age)) || Number(age) < 18) && (
+            <Text style={styles.fieldError}>You must be at least 18 to join</Text>
+          )}
 
           <Text style={styles.label}>Gender</Text>
           <OptionGroup options={genderOptions} value={gender} onChange={setGender} disabled={submitting} />
@@ -213,6 +262,7 @@ export function CreateProfileScreen() {
           <OptionGroup options={relationshipOptions} value={relationshipStatus} onChange={setRelationshipStatus} disabled={submitting} />
 
           <Text style={styles.label}>Instagram handle</Text>
+          <Text style={styles.helper}>Optional. Share your Instagram to help others connect with you.</Text>
           <View style={styles.instagramContainer} pointerEvents="box-none">
             <Text style={styles.instagramPrefix}>@</Text>
             <TextInput
@@ -221,7 +271,6 @@ export function CreateProfileScreen() {
               onChangeText={(text) => {
                 // Remove @ if user tries to add it, we'll add it automatically
                 const cleaned = text.replace(/^@+/, '');
-                console.log('Instagram handle input changed:', { original: text, cleaned });
                 setInstagramHandle(cleaned);
               }}
               placeholder="username"
@@ -230,6 +279,7 @@ export function CreateProfileScreen() {
               autoCorrect={false}
               editable={!submitting}
               keyboardType="default"
+              maxLength={30}
             />
           </View>
 
@@ -247,22 +297,51 @@ export function CreateProfileScreen() {
             />
           </View>
 
-          <Text style={styles.label}>Bio</Text>
-          <Text style={styles.helper}>Share a little bit about yourself. 3 adjectives to describe yourself / interests, why should you date me, etc.</Text>
+          <Text style={styles.label}>Bio <Text style={{ color: cupidTheme.colors.error }}>*</Text></Text>
+          <View style={styles.bioHeader}>
+            <Text style={styles.helper}>Tell others about yourself. What makes you unique?</Text>
+            {bio.trim().length > 0 && (
+              <Text style={styles.charCount}>{bio.trim().length}/500</Text>
+            )}
+          </View>
           <TextInput
-            style={[styles.input, styles.textArea]}
+            style={[styles.input, styles.textArea, bio.trim().length > 0 && bio.trim().length < 20 && styles.inputError]}
             value={bio}
-            onChangeText={setBio}
-            placeholder="Share a little bit about yourself. 3 adjectives to describe yourself / interests, why should you date me, etc."
+            onChangeText={(text) => {
+              setBio(text);
+              if (error && error.includes('bio')) setError(null);
+            }}
+            placeholder="Share your interests, what you're looking for, or what makes you special. Be authentic!"
             placeholderTextColor={cupidTheme.colors.textMuted}
             editable={!submitting}
             multiline
+            maxLength={500}
+            textAlignVertical="top"
           />
+          {bio.trim().length > 0 && bio.trim().length < 20 && (
+            <Text style={styles.fieldError}>Please write at least 20 characters to help others get to know you</Text>
+          )}
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.error}>{error}</Text>
+            </View>
+          ) : null}
 
-          <Pressable style={[styles.button, submitting && styles.buttonDisabled]} onPress={handleSubmit} disabled={submitting}>
-            {submitting ? <ActivityIndicator color={cupidTheme.colors.surface} /> : <Text style={styles.buttonLabel}>Save & continue</Text>}
+          <Pressable 
+            style={[styles.button, (submitting || photos.length === 0) && styles.buttonDisabled]} 
+            onPress={handleSubmit} 
+            disabled={submitting || photos.length === 0}
+            accessibilityLabel="Save and continue"
+            accessibilityHint="Saves your profile and continues to the main app"
+          >
+            {submitting ? (
+              <ActivityIndicator color={cupidTheme.colors.surface} />
+            ) : (
+              <Text style={styles.buttonLabel}>
+                {photos.length === 0 ? 'Add a photo to continue' : 'Save & continue'}
+              </Text>
+            )}
           </Pressable>
         </View>
       </ScrollView>
@@ -344,8 +423,11 @@ const styles = StyleSheet.create({
     borderColor: cupidTheme.colors.borderSubtle,
   },
   label: {
-    color: cupidTheme.colors.textSecondary,
-    fontWeight: '700',
+    color: cupidTheme.colors.textPrimary,
+    fontWeight: '800',
+    fontSize: 15,
+    marginBottom: 2,
+    letterSpacing: 0.2,
   },
   input: {
     backgroundColor: cupidTheme.colors.surfaceMuted,
@@ -354,8 +436,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     color: cupidTheme.colors.textPrimary,
     fontSize: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: cupidTheme.colors.border,
+    minHeight: 50,
   },
   textArea: {
     minHeight: 140,
@@ -365,19 +448,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    marginTop: 4,
   },
   photoItem: {
     width: 96,
     height: 120,
-    borderRadius: 14,
+    borderRadius: cupidTheme.radii.md,
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: cupidTheme.colors.border,
     backgroundColor: cupidTheme.colors.surfaceMuted,
+    position: 'relative',
   },
   photo: {
     width: '100%',
     height: '100%',
+    backgroundColor: cupidTheme.colors.surfaceMuted,
   },
   photoPlaceholder: {
     backgroundColor: cupidTheme.colors.surfaceMuted,
@@ -388,18 +474,24 @@ const styles = StyleSheet.create({
     color: cupidTheme.colors.textMuted,
     fontSize: 12,
     fontWeight: '600',
+    textAlign: 'center',
   },
   photoRemove: {
     position: 'absolute',
     top: 6,
     right: 6,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   photoRemoveLabel: {
     color: '#FFFFFF',
@@ -411,21 +503,30 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 6,
     left: 6,
-    backgroundColor: cupidTheme.colors.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '700',
-    color: cupidTheme.colors.textPrimary,
     borderWidth: 1,
     borderColor: cupidTheme.colors.borderSubtle,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  photoBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: cupidTheme.colors.textPrimary,
+    letterSpacing: 0.3,
   },
   photoAdd: {
     width: 96,
     height: 120,
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: cupidTheme.radii.md,
+    borderWidth: 2,
+    borderStyle: 'dashed',
     borderColor: cupidTheme.colors.accent,
     backgroundColor: cupidTheme.colors.surface,
     alignItems: 'center',
@@ -433,11 +534,16 @@ const styles = StyleSheet.create({
   },
   photoAddLabel: {
     color: cupidTheme.colors.accent,
-    fontWeight: '700',
+    fontWeight: '800',
+    fontSize: 14,
+    letterSpacing: 0.3,
   },
   helper: {
     color: cupidTheme.colors.textMuted,
-    marginBottom: 8,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 10,
+    marginTop: -4,
   },
   instagramContainer: {
     flexDirection: 'row',
@@ -485,19 +591,77 @@ const styles = StyleSheet.create({
   optionLabelActive: {
     color: cupidTheme.colors.textPrimary,
   },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  photoCount: {
+    color: cupidTheme.colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  photoWarning: {
+    color: cupidTheme.colors.error,
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 8,
+    lineHeight: 18,
+    paddingHorizontal: 4,
+  },
+  photoAddDisabled: {
+    opacity: 0.5,
+  },
+  bioHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  charCount: {
+    color: cupidTheme.colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  inputError: {
+    borderColor: cupidTheme.colors.error,
+    borderWidth: 2,
+    backgroundColor: '#FFF5F5',
+  },
+  fieldError: {
+    color: cupidTheme.colors.error,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 4,
+    marginBottom: 6,
+    lineHeight: 16,
+  },
+  errorContainer: {
+    backgroundColor: '#FFF5F5',
+    borderRadius: cupidTheme.radii.lg,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: cupidTheme.colors.error,
+    marginTop: 4,
+  },
   error: {
     color: cupidTheme.colors.error,
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
   },
   button: {
     backgroundColor: cupidTheme.colors.accent,
     borderRadius: cupidTheme.radii.lg,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 6,
+    marginTop: 8,
+    minHeight: 56,
+    justifyContent: 'center',
     ...cardShadow('floating'),
   },
   buttonDisabled: {
-    opacity: 0.7,
+    opacity: 0.5,
+    backgroundColor: cupidTheme.colors.borderSubtle,
   },
   buttonLabel: {
     color: cupidTheme.colors.surface,

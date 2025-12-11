@@ -5,7 +5,10 @@ import { AdminScreen } from '@/screens/AdminScreen';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { cupidTheme } from '@/constants/theme';
-import { useMatchesCount } from '@/hooks/useMatchesCount';
+import { useMatchesCount, registerMatchNotificationCallback } from '@/hooks/useMatchesCount';
+import { MatchNotificationDialog } from '@/components/MatchNotificationDialog';
+import { useMatchNotification } from '@/hooks/useMatchNotification';
+import { useEffect, useState } from 'react';
 
 const Tab = createBottomTabNavigator();
 
@@ -13,9 +16,35 @@ const enableAdminTab = process.env.EXPO_PUBLIC_ENABLE_ADMIN === 'true';
 
 export function RootNavigator() {
   const matchesCount = useMatchesCount();
+  const { matchedProfile, showNotification, hideNotification } = useMatchNotification();
+  const [notificationVisible, setNotificationVisible] = useState(false);
+
+  // Register for match notifications from useMatchesCount
+  useEffect(() => {
+    const unsubscribe = registerMatchNotificationCallback((profile) => {
+      showNotification(profile);
+      setNotificationVisible(true);
+    });
+    return unsubscribe;
+  }, [showNotification]);
+
+  // Update notification visibility when matchedProfile changes
+  useEffect(() => {
+    if (matchedProfile) {
+      setNotificationVisible(true);
+    }
+  }, [matchedProfile]);
+
+  const handleCloseNotification = () => {
+    setNotificationVisible(false);
+    setTimeout(() => {
+      hideNotification();
+    }, 300); // Delay to allow animation to complete
+  };
 
   return (
-    <Tab.Navigator
+    <>
+      <Tab.Navigator
       initialRouteName="Explore"
       screenOptions={({ route }) => ({
         headerShown: false,
@@ -53,7 +82,14 @@ export function RootNavigator() {
       />
       <Tab.Screen name="Profile" component={ProfileScreen} />
       {enableAdminTab && <Tab.Screen name="Admin" component={AdminScreen} />}
-    </Tab.Navigator>
+      </Tab.Navigator>
+      <MatchNotificationDialog
+        visible={notificationVisible}
+        matchedProfile={matchedProfile}
+        onClose={handleCloseNotification}
+        autoDismissDuration={10000}
+      />
+    </>
   );
 }
 

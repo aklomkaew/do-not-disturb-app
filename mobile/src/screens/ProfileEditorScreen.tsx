@@ -222,8 +222,17 @@ export function ProfileEditorScreen() {
         </View>
         <Text style={styles.subheading}>Update your basic details anytime.</Text>
 
-        <Text style={styles.label}>Photos (first is your profile picture)</Text>
-        <Text style={styles.helper}>{uploading ? 'Uploading...' : 'Add up to 5 (3 recommended).'}</Text>
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>Photos</Text>
+          {photos.length > 0 && (
+            <Text style={styles.photoCount}>{photos.length}/5</Text>
+          )}
+        </View>
+        <Text style={styles.helper}>
+          {uploading 
+            ? 'Uploading photos...' 
+            : 'Your first photo is your profile picture. Add up to 5 photos total (3 recommended for best results).'}
+        </Text>
         <View style={styles.photoRow}>
           {photos.map((photo, idx) => {
             // Ensure we have a valid URL - use url if available, otherwise try path as URL, fallback to empty
@@ -231,21 +240,38 @@ export function ProfileEditorScreen() {
             return (
               <View key={photo.path} style={styles.photoItem}>
                 {photoUri ? (
-                  <Image source={{ uri: photoUri }} style={styles.photo} />
+                  <Image 
+                    source={{ uri: photoUri }} 
+                    style={styles.photo}
+                    resizeMode="cover"
+                  />
                 ) : (
                   <View style={[styles.photo, styles.photoPlaceholder]}>
-                    <Text style={styles.photoPlaceholderText}>Photo</Text>
+                    <Text style={styles.photoPlaceholderText}>Loading...</Text>
                   </View>
                 )}
-                <Pressable style={styles.photoRemove} onPress={() => handleRemovePhoto(photo.path)} accessibilityLabel="Remove photo">
+                <Pressable 
+                  style={styles.photoRemove} 
+                  onPress={() => handleRemovePhoto(photo.path)} 
+                  accessibilityLabel="Remove photo"
+                  accessibilityHint="Removes this photo from your profile"
+                >
                   <Text style={styles.photoRemoveLabel}>×</Text>
                 </Pressable>
-                <Text style={styles.photoBadge}>{idx === 0 ? 'Profile' : `#${idx + 1}`}</Text>
+                <View style={styles.photoBadge}>
+                  <Text style={styles.photoBadgeText}>{idx === 0 ? 'Profile' : `${idx + 1}`}</Text>
+                </View>
               </View>
             );
           })}
           {photos.length < 5 ? (
-            <Pressable style={styles.photoAdd} onPress={pickPhotos} disabled={submitting}>
+            <Pressable 
+              style={[styles.photoAdd, (submitting || uploading) && styles.photoAddDisabled]} 
+              onPress={pickPhotos} 
+              disabled={submitting || uploading}
+              accessibilityLabel="Add photo"
+              accessibilityHint="Add a new photo to your profile"
+            >
               <Text style={styles.photoAddLabel}>+ Add</Text>
             </Pressable>
           ) : null}
@@ -293,12 +319,12 @@ export function ProfileEditorScreen() {
         </View>
 
         <Text style={styles.label}>Bio</Text>
-        <Text style={styles.helper}>Share a little bit about yourself. 3 adjectives to describe yourself / interests, why should you date me, etc.</Text>
+        <Text style={styles.helper}>Tell others about yourself. What makes you unique? Share your interests, what you're looking for, or what makes you special.</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           value={bio}
           onChangeText={setBio}
-          placeholder="Share a little bit about yourself. 3 adjectives to describe yourself / interests, why should you date me, etc."
+            placeholder="Share your interests, what you're looking for, or what makes you special. Be authentic!"
           placeholderTextColor={cupidTheme.colors.textMuted}
           multiline
           numberOfLines={4}
@@ -318,7 +344,11 @@ export function ProfileEditorScreen() {
           />
         </View>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.error}>{error}</Text>
+          </View>
+        ) : null}
 
         <View style={styles.actionButtons}>
           <Pressable 
@@ -405,10 +435,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   heading: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '800',
     color: cupidTheme.colors.textPrimary,
     flex: 1,
+    letterSpacing: -0.5,
   },
   cancelButton: {
     paddingVertical: 8,
@@ -421,7 +452,9 @@ const styles = StyleSheet.create({
   },
   subheading: {
     color: cupidTheme.colors.textSecondary,
-    marginBottom: 8,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
   },
   instagramContainer: {
     flexDirection: 'row',
@@ -447,7 +480,10 @@ const styles = StyleSheet.create({
   },
   helper: {
     color: cupidTheme.colors.textMuted,
-    marginBottom: 8,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 10,
+    marginTop: -4,
   },
   toggleRow: {
     flexDirection: 'row',
@@ -455,8 +491,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   label: {
-    color: cupidTheme.colors.textSecondary,
-    fontWeight: '700',
+    color: cupidTheme.colors.textPrimary,
+    fontWeight: '800',
+    fontSize: 15,
+    marginBottom: 2,
+    letterSpacing: 0.2,
   },
   input: {
     backgroundColor: cupidTheme.colors.surfaceMuted,
@@ -465,8 +504,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     color: cupidTheme.colors.textPrimary,
     fontSize: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: cupidTheme.colors.border,
+    minHeight: 50,
   },
   textArea: {
     minHeight: 130,
@@ -481,11 +521,12 @@ const styles = StyleSheet.create({
   photoItem: {
     width: 96,
     height: 120,
-    borderRadius: cupidTheme.radii.lg,
+    borderRadius: cupidTheme.radii.md,
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: cupidTheme.colors.border,
     backgroundColor: cupidTheme.colors.surfaceMuted,
+    position: 'relative',
   },
   photo: {
     width: '100%',
@@ -500,18 +541,24 @@ const styles = StyleSheet.create({
     color: cupidTheme.colors.textMuted,
     fontSize: 12,
     fontWeight: '600',
+    textAlign: 'center',
   },
   photoRemove: {
     position: 'absolute',
     top: 6,
     right: 6,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   photoRemoveLabel: {
     color: '#FFFFFF',
@@ -523,21 +570,24 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 6,
     left: 6,
-    backgroundColor: cupidTheme.colors.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '700',
-    color: cupidTheme.colors.textPrimary,
     borderWidth: 1,
     borderColor: cupidTheme.colors.borderSubtle,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   photoAdd: {
     width: 96,
     height: 120,
-    borderRadius: cupidTheme.radii.lg,
-    borderWidth: 1,
+    borderRadius: cupidTheme.radii.md,
+    borderWidth: 2,
+    borderStyle: 'dashed',
     borderColor: cupidTheme.colors.accent,
     backgroundColor: cupidTheme.colors.surface,
     alignItems: 'center',
@@ -545,7 +595,9 @@ const styles = StyleSheet.create({
   },
   photoAddLabel: {
     color: cupidTheme.colors.accent,
-    fontWeight: '700',
+    fontWeight: '800',
+    fontSize: 14,
+    letterSpacing: 0.3,
   },
   optionGroup: {
     flexDirection: 'row',
@@ -571,8 +623,19 @@ const styles = StyleSheet.create({
   optionLabelActive: {
     color: cupidTheme.colors.textPrimary,
   },
+  errorContainer: {
+    backgroundColor: '#FFF5F5',
+    borderRadius: cupidTheme.radii.lg,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: cupidTheme.colors.error,
+    marginTop: 4,
+  },
   error: {
     color: cupidTheme.colors.error,
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
   },
   actionButtons: {
     flexDirection: 'row',
@@ -585,10 +648,13 @@ const styles = StyleSheet.create({
     borderRadius: cupidTheme.radii.lg,
     paddingVertical: 16,
     alignItems: 'center',
+    minHeight: 56,
+    justifyContent: 'center',
     ...cardShadow('floating'),
   },
   buttonDisabled: {
-    opacity: 0.7,
+    opacity: 0.5,
+    backgroundColor: cupidTheme.colors.borderSubtle,
   },
   buttonLabel: {
     color: cupidTheme.colors.surface,
@@ -630,14 +696,15 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
     color: cupidTheme.colors.textPrimary,
+    letterSpacing: -0.3,
   },
   modalMessage: {
-    fontSize: 14,
+    fontSize: 15,
     color: cupidTheme.colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 22,
   },
   modalActions: {
     flexDirection: 'row',
@@ -647,11 +714,13 @@ const styles = StyleSheet.create({
   modalCancelButton: {
     flex: 1,
     borderRadius: cupidTheme.radii.lg,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: cupidTheme.colors.borderSubtle,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
     backgroundColor: cupidTheme.colors.surfaceMuted,
+    minHeight: 50,
+    justifyContent: 'center',
   },
   modalCancelLabel: {
     color: cupidTheme.colors.textPrimary,
@@ -661,12 +730,34 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: cupidTheme.radii.lg,
     backgroundColor: cupidTheme.colors.error,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
+    minHeight: 50,
+    justifyContent: 'center',
   },
   modalDeleteLabel: {
     color: cupidTheme.colors.surface,
     fontWeight: '800',
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  photoCount: {
+    color: cupidTheme.colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  photoBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: cupidTheme.colors.textPrimary,
+    letterSpacing: 0.3,
+  },
+  photoAddDisabled: {
+    opacity: 0.5,
   },
 });
 

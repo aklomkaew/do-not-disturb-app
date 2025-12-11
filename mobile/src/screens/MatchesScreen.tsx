@@ -1,5 +1,5 @@
 import { ScreenContainer } from '@/components/ScreenContainer';
-import { PhotoCarousel } from '@/components/PhotoCarousel';
+import { ProfileCard, ProfileCardData } from '@/components/ProfileCard';
 import { API_BASE_URL } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import { useFocusEffect } from '@react-navigation/native';
@@ -114,40 +114,42 @@ export function MatchesScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchMatches(true)} tintColor={cupidTheme.colors.accent} />}
         ListHeaderComponent={<MatchesHeader matchCount={matches.length} />}
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            {item.partner.photos?.[0] ? <Image source={{ uri: item.partner.photos[0] }} style={styles.photo} /> : null}
-            <View style={styles.cardHeader}>
-              <View>
-                <Text style={styles.cardTitle}>
-                  {item.partner.displayName}, {item.partner.age}
-                </Text>
-                <Text style={styles.location}>{item.partner.location ?? 'Somewhere on Earth'}</Text>
+          <Pressable onPress={() => setSelectedMatch(item)}>
+            <View style={styles.card}>
+              {item.partner.photos?.[0] ? <Image source={{ uri: item.partner.photos[0] }} style={styles.photo} /> : null}
+              <View style={styles.cardHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>
+                    {item.partner.displayName}, {item.partner.age}
+                  </Text>
+                  <Text style={styles.location}>{item.partner.location ?? 'Somewhere on Earth'}</Text>
+                </View>
+                <View style={styles.badge}>
+                  <Ionicons name="calendar-outline" size={14} color={cupidTheme.colors.accent} />
+                  <Text style={styles.badgeLabel}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+                </View>
               </View>
-              <View style={styles.badge}>
-                <Ionicons name="calendar-outline" size={14} color={cupidTheme.colors.accent} />
-                <Text style={styles.badgeLabel}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+              <Text style={styles.bio} numberOfLines={3}>
+                {item.partner.bio}
+              </Text>
+              <View style={styles.cardFooter}>
+                <View style={styles.metaChip}>
+                  <Ionicons name="people-outline" size={14} color={cupidTheme.colors.accent} />
+                  <Text style={styles.metaChipLabel}>Mutual interest logged</Text>
+                </View>
+                <View style={styles.metaChip}>
+                  <Ionicons name="sparkles-outline" size={14} color={cupidTheme.colors.textMuted} />
+                  <Text style={styles.metaChipLabel}>Tap to view full profile</Text>
+                </View>
               </View>
             </View>
-            <Text style={styles.bio} numberOfLines={3}>
-              {item.partner.bio}
-            </Text>
-            <View style={styles.cardFooter}>
-              <View style={styles.metaChip}>
-                <Ionicons name="people-outline" size={14} color={cupidTheme.colors.accent} />
-                <Text style={styles.metaChipLabel}>Mutual interest logged</Text>
-              </View>
-              <View style={styles.metaChip}>
-                <Ionicons name="sparkles-outline" size={14} color={cupidTheme.colors.textMuted} />
-                <Text style={styles.metaChipLabel}>Refresh deck for next steps</Text>
-              </View>
-            </View>
-          </View>
+          </Pressable>
         )}
         ListEmptyComponent={
           <View style={styles.stateCard}>
-            <Ionicons name="heart-outline" size={28} color={cupidTheme.colors.accent} />
+            <Ionicons name="heart-outline" size={40} color={cupidTheme.colors.accent} />
             <Text style={styles.heading}>No matches yet</Text>
-            <Text style={styles.copy}>Keep exploring and we’ll drop new matches here.</Text>
+            <Text style={styles.copy}>Keep exploring and we'll drop new matches here.</Text>
             <Text style={styles.copy}>We refresh your deck multiple times a week during beta.</Text>
           </View>
         }
@@ -156,13 +158,18 @@ export function MatchesScreen() {
         <Modal animationType="slide" transparent visible onRequestClose={() => setSelectedMatch(null)}>
           <View style={styles.modalBackdrop}>
             <View style={[styles.modalCard, { width: modalWidth }]}>
-              {selectedMatch.partner.photos && selectedMatch.partner.photos.length > 0 ? (
-                <PhotoCarousel photos={selectedMatch.partner.photos} width={modalWidth - 24} height={320} />
-              ) : (
-                <View style={styles.photoFallback}>
-                  <Text style={styles.photoFallbackText}>No photos to display</Text>
-                </View>
-              )}
+              <ProfileCard
+                profile={{
+                  id: selectedMatch.partner.id,
+                  displayName: selectedMatch.partner.displayName,
+                  age: selectedMatch.partner.age,
+                  location: selectedMatch.partner.location,
+                  bio: selectedMatch.partner.bio,
+                  photos: selectedMatch.partner.photos,
+                } as ProfileCardData}
+                variant="detailed"
+                showActions={false}
+              />
               <Pressable style={styles.closeButton} onPress={() => setSelectedMatch(null)}>
                 <Text style={styles.closeLabel}>Close</Text>
               </Pressable>
@@ -209,54 +216,50 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     color: cupidTheme.colors.textPrimary,
+    letterSpacing: -0.3,
   },
   photo: {
     width: '100%',
     height: 160,
     borderRadius: cupidTheme.radii.md,
     backgroundColor: cupidTheme.colors.surfaceMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photoFallback: {
-    height: 320,
-    borderRadius: cupidTheme.radii.lg,
-    backgroundColor: cupidTheme.colors.surfaceMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photoFallbackText: {
-    color: cupidTheme.colors.textMuted,
-    fontWeight: '700',
+    marginBottom: 12,
+    resizeMode: 'cover',
   },
   stateCard: {
-    padding: 22,
-    borderRadius: cupidTheme.radii.lg,
-    backgroundColor: cupidTheme.colors.surfaceMuted,
+    padding: 32,
+    borderRadius: cupidTheme.radii.xl,
+    backgroundColor: cupidTheme.colors.surface,
     alignItems: 'center',
-    gap: 10,
+    gap: 14,
     borderWidth: 1,
     borderColor: cupidTheme.colors.borderSubtle,
+    ...cardShadow(),
   },
   emptyContainer: {
     flexGrow: 1,
     justifyContent: 'center',
   },
   heading: {
-    fontSize: 22,
+    fontSize: 24,
     color: cupidTheme.colors.textPrimary,
     fontWeight: '800',
+    textAlign: 'center',
+    letterSpacing: -0.3,
   },
   location: {
     color: cupidTheme.colors.textSecondary,
   },
   bio: {
     color: cupidTheme.colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 22,
+    fontSize: 15,
   },
   copy: {
     color: cupidTheme.colors.textSecondary,
     textAlign: 'center',
+    fontSize: 15,
+    lineHeight: 22,
   },
   meta: {
     color: cupidTheme.colors.textMuted,
@@ -302,6 +305,9 @@ const styles = StyleSheet.create({
   errorText: {
     color: cupidTheme.colors.error,
     textAlign: 'center',
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 22,
   },
   modalBackdrop: {
     flex: 1,

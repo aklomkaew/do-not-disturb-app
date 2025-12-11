@@ -1,10 +1,11 @@
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { StatusBanner } from '@/components/StatusBanner';
-import { PhotoCarousel } from '@/components/PhotoCarousel';
+import { ProfileCard, ProfileCardData } from '@/components/ProfileCard';
 import { API_BASE_URL } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
-import { refreshMatchesCount } from '@/hooks/useMatchesCount';
+import { refreshMatchesCount, notifyMatch } from '@/hooks/useMatchesCount';
+import { useMatchNotification } from '@/hooks/useMatchNotification';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -22,6 +23,7 @@ type DeckProfile = {
 export function SwipeScreen() {
   const health = useHealthCheck();
   const { getAccessToken } = useAuth();
+  const { showNotification } = useMatchNotification();
   const [deck, setDeck] = useState<DeckProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +107,14 @@ export function SwipeScreen() {
       }
 
       const data = await response.json();
-      if (direction === 'RIGHT' && data.match) {
+      if (direction === 'RIGHT' && data.match && currentProfile) {
+        // Show notification immediately with the profile we just matched with
+        notifyMatch({
+          displayName: currentProfile.displayName,
+          age: currentProfile.age,
+          photo: currentProfile.photos?.[0],
+        });
+        // Also refresh the count (this may trigger another notification via callback if needed)
         refreshMatchesCount(token);
       }
 
@@ -186,7 +195,9 @@ export function SwipeScreen() {
       ) : currentProfile ? (
         <>
           <ProfileCard
-            profile={currentProfile}
+            profile={currentProfile as ProfileCardData}
+            variant="default"
+            showActions={true}
             onPass={() => handleSwipe('LEFT')}
             onLike={() => handleSwipe('RIGHT')}
             actionLoading={actionLoading}
@@ -199,8 +210,8 @@ export function SwipeScreen() {
         </>
       ) : (
         <View style={styles.stateCard}>
-          <Text style={styles.heading}>You're all caught up!</Text>
-          <Text style={styles.copy}>We'll notify you as soon as new profiles arrive.</Text>
+          <Text style={styles.heading}>You're all caught up! 🎉</Text>
+          <Text style={styles.copy}>We'll notify you as soon as new profiles arrive. Check back soon!</Text>
           <Pressable style={styles.secondaryButton} onPress={fetchDeck}>
             <Text style={styles.secondaryButtonLabel}>Refresh</Text>
           </Pressable>
@@ -215,147 +226,54 @@ export function SwipeScreen() {
   );
 }
 
-function ProfileCard({
-  profile,
-  onPass,
-  onLike,
-  actionLoading,
-}: {
-  profile: DeckProfile;
-  onPass: () => void;
-  onLike: () => void;
-  actionLoading: boolean;
-}) {
-  const photos = profile.photos ?? [];
-  const hasPhotos = photos.length > 0;
-  const width = Dimensions.get('window').width - 32;
-
-  return (
-    <View style={styles.card}>
-      {hasPhotos ? (
-        <PhotoCarousel photos={photos} width={width} />
-      ) : (
-        <View style={[styles.photoFallback, { width }]}>
-          <Text style={styles.photoFallbackText}>No photos yet</Text>
-        </View>
-      )}
-
-      <View style={styles.textOverlay}>
-        <Text style={styles.heading}>
-          {profile.displayName}, {profile.age}
-        </Text>
-        <Text style={styles.location}>{profile.location ?? 'Somewhere on Earth'}</Text>
-        <Text style={styles.bio} numberOfLines={4}>
-          {profile.bio}
-        </Text>
-      </View>
-
-      <View style={styles.actions}>
-        <Pressable style={[styles.actionButton, styles.passButton]} onPress={onPass} disabled={actionLoading}>
-          <Text style={styles.actionLabel}>Pass</Text>
-        </Pressable>
-        <Pressable style={[styles.actionButton, styles.likeButton]} onPress={onLike} disabled={actionLoading}>
-          <Text style={[styles.actionLabel, styles.actionLabelContrast]}>Like</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-
 const styles = StyleSheet.create({
   stateCard: {
-    padding: 22,
-    borderRadius: cupidTheme.radii.lg,
-    backgroundColor: cupidTheme.colors.surfaceMuted,
-    gap: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: cupidTheme.colors.borderSubtle,
-  },
-  card: {
-    padding: 24,
+    padding: 32,
     borderRadius: cupidTheme.radii.xl,
     backgroundColor: cupidTheme.colors.surface,
-    gap: 14,
+    gap: 16,
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: cupidTheme.colors.borderSubtle,
     ...cardShadow(),
   },
   heading: {
-    fontSize: 26,
+    fontSize: 24,
     color: cupidTheme.colors.textPrimary,
     fontWeight: '800',
-  },
-  photoFallback: {
-    height: 360,
-    borderRadius: cupidTheme.radii.lg,
-    backgroundColor: cupidTheme.colors.surfaceMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photoFallbackText: {
-    color: cupidTheme.colors.textMuted,
-    fontWeight: '700',
-  },
-  textOverlay: {
-    gap: 6,
-  },
-  location: {
-    color: cupidTheme.colors.textSecondary,
-  },
-  bio: {
-    color: cupidTheme.colors.textSecondary,
-    lineHeight: 22,
+    textAlign: 'center',
+    letterSpacing: -0.3,
   },
   copy: {
     color: cupidTheme.colors.textSecondary,
     textAlign: 'center',
+    fontSize: 15,
+    lineHeight: 22,
   },
   errorText: {
     color: cupidTheme.colors.error,
     textAlign: 'center',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: cupidTheme.radii.lg,
-    alignItems: 'center',
-  },
-  passButton: {
-    backgroundColor: cupidTheme.colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: cupidTheme.colors.border,
-  },
-  likeButton: {
-    backgroundColor: cupidTheme.colors.accent,
-    ...cardShadow('floating'),
-  },
-  actionLabel: {
-    color: cupidTheme.colors.textPrimary,
-    fontWeight: '800',
-  },
-  actionLabelContrast: {
-    color: cupidTheme.colors.surface,
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 22,
   },
   rewindButton: {
     marginTop: 16,
     marginHorizontal: 16,
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: cupidTheme.radii.lg,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: cupidTheme.colors.accentSecondary,
-    backgroundColor: cupidTheme.colors.surfaceMuted,
+    backgroundColor: cupidTheme.colors.surface,
+    minHeight: 50,
+    justifyContent: 'center',
   },
   rewindLabel: {
     color: cupidTheme.colors.accentSecondary,
-    fontWeight: '700',
+    fontWeight: '800',
+    fontSize: 15,
+    letterSpacing: 0.3,
   },
   secondaryButton: {
     marginTop: 8,
