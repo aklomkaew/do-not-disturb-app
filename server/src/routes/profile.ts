@@ -22,6 +22,7 @@ const profileDetailsSchema = z.object({
   relationshipStatus: z.nativeEnum(RelationshipStatus).optional(),
   bio: z.string().max(500).optional(),
   location: z.string().max(120).optional(),
+  instagramHandle: z.string().max(50).nullable().optional(),
   matchNotificationsEnabled: z.boolean().optional(),
   media: photosSchema,
 });
@@ -57,6 +58,7 @@ profileRouter.post('/bootstrap', async (req, res, next) => {
         relationshipStatus: data.relationshipStatus ?? RelationshipStatus.SINGLE,
         bio: data.bio ?? 'New to Do Not Disturb. Bio coming soon.',
         location: data.location?.trim() ? data.location.trim() : null,
+        instagramHandle: data.instagramHandle?.trim() ? data.instagramHandle.trim() : null,
         matchNotificationsEnabled: data.matchNotificationsEnabled ?? true,
         media: { photos },
         preferences: {},
@@ -96,7 +98,7 @@ profileRouter.patch('/me', async (req, res, next) => {
     }
 
     const data = updateSchema.parse(req.body);
-    const { matchNotificationsEnabled, location: locationInput, media, ...rest } = data;
+    const { matchNotificationsEnabled, location: locationInput, instagramHandle: instagramHandleInput, media, ...rest } = data;
 
     if (Object.keys(data).length === 0) {
       return res.status(400).json({ message: 'No profile fields provided' });
@@ -107,6 +109,7 @@ profileRouter.patch('/me', async (req, res, next) => {
       data: {
         ...rest,
         location: locationInput !== undefined ? (locationInput?.trim() ? locationInput.trim() : null) : undefined,
+        instagramHandle: instagramHandleInput !== undefined ? (instagramHandleInput?.trim() ? instagramHandleInput.trim() : null) : undefined,
         matchNotificationsEnabled: matchNotificationsEnabled ?? undefined,
         media: media ? { photos: media.photos } : undefined,
       },

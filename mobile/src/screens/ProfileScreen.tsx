@@ -50,6 +50,9 @@ export function ProfileScreen() {
       }
 
       const data = await response.json();
+      console.log('Profile fetched from API:', JSON.stringify(data, null, 2));
+      console.log('Instagram handle from API:', data.profile?.instagramHandle);
+      
       const normalized: ProfileResponse = {
         displayName: data.profile.displayName,
         age: data.profile.age,
@@ -62,6 +65,9 @@ export function ProfileScreen() {
         photoPaths: data.profile.media?.paths ?? [],
       };
 
+      console.log('Normalized profile:', JSON.stringify(normalized, null, 2));
+      console.log('Instagram handle in normalized profile:', normalized.instagramHandle);
+      
       setProfile(normalized);
       setStatus('ready');
     } catch (err) {

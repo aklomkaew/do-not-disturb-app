@@ -58,6 +58,7 @@ export function ProfileEditorScreen() {
   const handleInstagramChange = (text: string) => {
     // Remove @ if user tries to add it, we'll add it automatically
     const cleaned = text.replace(/^@+/, '');
+    console.log('Instagram handle input changed:', { original: text, cleaned, previousState: instagramHandle });
     setInstagramHandle(cleaned);
   };
 
@@ -142,6 +143,9 @@ export function ProfileEditorScreen() {
         matchNotificationsEnabled: notifyMatches,
         media: { photos: photos.map((photo) => photo.path) },
       };
+      
+      console.log('Saving profile with payload:', JSON.stringify(payload, null, 2));
+      console.log('Instagram handle being saved:', instagramHandle.trim() || null);
 
       if (age.trim().length > 0) {
         payload.age = Number(age);
@@ -157,8 +161,14 @@ export function ProfileEditorScreen() {
       });
 
       if (!response.ok) {
-        throw new Error(await extractError(response));
+        const errorMsg = await extractError(response);
+        console.error('Profile update failed:', errorMsg);
+        throw new Error(errorMsg);
       }
+
+      const responseData = await response.json();
+      console.log('Profile update successful, response:', JSON.stringify(responseData, null, 2));
+      console.log('Instagram handle in response:', responseData?.profile?.instagramHandle);
 
       // Update preferred name cache for immediate UI updates
       updatePreferredName(displayName.trim());
@@ -238,7 +248,7 @@ export function ProfileEditorScreen() {
         <OptionGroup options={relationshipOptions} value={relationshipStatus} onChange={setRelationshipStatus} />
 
         <Text style={styles.label}>Instagram handle</Text>
-        <View style={styles.instagramContainer}>
+        <View style={styles.instagramContainer} pointerEvents="box-none">
           <Text style={styles.instagramPrefix}>@</Text>
           <TextInput
             style={[styles.input, styles.instagramInput]}
@@ -248,6 +258,8 @@ export function ProfileEditorScreen() {
             placeholderTextColor={cupidTheme.colors.textMuted}
             autoCapitalize="none"
             autoCorrect={false}
+            editable={!submitting}
+            keyboardType="default"
           />
         </View>
 
@@ -363,7 +375,9 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 0,
     paddingLeft: 4,
+    paddingRight: 18,
     margin: 0,
+    backgroundColor: 'transparent',
   },
   helper: {
     color: cupidTheme.colors.textMuted,
@@ -384,6 +398,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 14,
     color: cupidTheme.colors.textPrimary,
+    fontSize: 16,
     borderWidth: 1,
     borderColor: cupidTheme.colors.border,
   },

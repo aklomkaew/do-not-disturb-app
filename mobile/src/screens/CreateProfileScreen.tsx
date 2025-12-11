@@ -213,7 +213,7 @@ export function CreateProfileScreen() {
           <OptionGroup options={relationshipOptions} value={relationshipStatus} onChange={setRelationshipStatus} disabled={submitting} />
 
           <Text style={styles.label}>Instagram handle</Text>
-          <View style={styles.instagramContainer}>
+          <View style={styles.instagramContainer} pointerEvents="box-none">
             <Text style={styles.instagramPrefix}>@</Text>
             <TextInput
               style={[styles.input, styles.instagramInput]}
@@ -221,6 +221,7 @@ export function CreateProfileScreen() {
               onChangeText={(text) => {
                 // Remove @ if user tries to add it, we'll add it automatically
                 const cleaned = text.replace(/^@+/, '');
+                console.log('Instagram handle input changed:', { original: text, cleaned });
                 setInstagramHandle(cleaned);
               }}
               placeholder="username"
@@ -228,6 +229,7 @@ export function CreateProfileScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               editable={!submitting}
+              keyboardType="default"
             />
           </View>
 
@@ -455,7 +457,9 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 0,
     paddingLeft: 4,
+    paddingRight: 18,
     margin: 0,
+    backgroundColor: 'transparent',
   },
   optionGroup: {
     flexDirection: 'row',

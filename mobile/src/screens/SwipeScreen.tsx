@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
 import { refreshMatchesCount } from '@/hooks/useMatchesCount';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 
@@ -26,6 +26,8 @@ export function SwipeScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [hasSwipesToRewind, setHasSwipesToRewind] = useState(false);
+  const [swipeCount, setSwipeCount] = useState(0); // Track swipes made in this session
 
   const fetchDeck = useCallback(async () => {
     try {
@@ -51,9 +53,31 @@ export function SwipeScreen() {
     }
   }, [getAccessToken]);
 
+  // Check if there are existing swipes to rewind on mount
+  useEffect(() => {
+    const checkForExistingSwipes = async () => {
+      try {
+        const token = await getAccessToken();
+        // Make a test call to see if rewind would work
+        // We can't actually check without rewinding, so we'll check after the first interaction
+        // For now, we'll start with false and let user actions determine it
+      } catch (err) {
+        // Silently fail
+      }
+    };
+    checkForExistingSwipes();
+  }, [getAccessToken]);
+
   useFocusEffect(
     useCallback(() => {
       fetchDeck();
+      // Reset swipeCount when screen is focused
+      // hasSwipesToRewind will be determined by checking if rewind works
+      setSwipeCount(0);
+      // Check if there are existing swipes by attempting a rewind check
+      // But we can't check without rewinding, so we'll start hidden
+      // and let the first swipe or rewind attempt determine the state
+      setHasSwipesToRewind(false);
     }, [fetchDeck])
   );
 
@@ -85,6 +109,10 @@ export function SwipeScreen() {
         refreshMatchesCount(token);
       }
 
+      // After a successful swipe, there are now swipes to rewind
+      setSwipeCount((prev) => prev + 1);
+      setHasSwipesToRewind(true);
+
       setDeck((prev) => {
         const [, ...rest] = prev;
         if (rest.length === 0) {
@@ -111,12 +139,30 @@ export function SwipeScreen() {
       });
 
       if (!response.ok) {
+        if (response.status === 404) {
+          // No more swipes to rewind - hide the button
+          setHasSwipesToRewind(false);
+          // Don't show alert, just silently hide the button
+          return;
+        }
         throw new Error(await extractError(response));
       }
 
+      // Rewind was successful - decrement our local swipe count
+      setSwipeCount((prev) => Math.max(0, prev - 1));
+      
+      // If rewind succeeds, there might be more swipes (from this session or before)
+      // So we keep the button visible. It will be hidden if the next rewind returns 404
+      setHasSwipesToRewind(true);
+      
       fetchDeck();
       refreshMatchesCount(token);
     } catch (err) {
+      if (err instanceof Error && (err.message.includes('No swipes to rewind') || err.message.includes('404'))) {
+        // No swipes to rewind - hide the button silently
+        setHasSwipesToRewind(false);
+        return;
+      }
       Alert.alert('Rewind failed', err instanceof Error ? err.message : 'Unable to rewind right now.');
     } finally {
       setActionLoading(false);
@@ -145,9 +191,11 @@ export function SwipeScreen() {
             onLike={() => handleSwipe('RIGHT')}
             actionLoading={actionLoading}
           />
-          <Pressable style={styles.rewindButton} onPress={handleRewind} disabled={actionLoading}>
-            <Text style={styles.rewindLabel}>Rewind</Text>
-          </Pressable>
+          {hasSwipesToRewind && (
+            <Pressable style={styles.rewindButton} onPress={handleRewind} disabled={actionLoading}>
+              <Text style={styles.rewindLabel}>Rewind</Text>
+            </Pressable>
+          )}
         </>
       ) : (
         <View style={styles.stateCard}>
@@ -156,9 +204,11 @@ export function SwipeScreen() {
           <Pressable style={styles.secondaryButton} onPress={fetchDeck}>
             <Text style={styles.secondaryButtonLabel}>Refresh</Text>
           </Pressable>
-          <Pressable style={styles.rewindButton} onPress={handleRewind} disabled={actionLoading}>
-            <Text style={styles.rewindLabel}>Rewind</Text>
-          </Pressable>
+          {hasSwipesToRewind && (
+            <Pressable style={styles.rewindButton} onPress={handleRewind} disabled={actionLoading}>
+              <Text style={styles.rewindLabel}>Rewind</Text>
+            </Pressable>
+          )}
         </View>
       )}
     </ScreenContainer>
