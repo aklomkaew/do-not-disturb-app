@@ -28,7 +28,7 @@ export function CreateProfileScreen() {
   const [age, setAge] = useState('');
   const [gender, setGender] = useState<typeof genderOptions[number]>('OTHER');
   const [relationshipStatus, setRelationshipStatus] = useState<typeof relationshipOptions[number]>('SINGLE');
-  const [location, setLocation] = useState('');
+  const [instagramHandle, setInstagramHandle] = useState('');
   const [bio, setBio] = useState('');
   const [notifyMatches, setNotifyMatches] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -120,7 +120,7 @@ export function CreateProfileScreen() {
           age: parsedAge,
           gender,
           relationshipStatus,
-          location: location.trim(),
+          instagramHandle: instagramHandle.trim() || null,
           bio: bio.trim(),
           matchNotificationsEnabled: notifyMatches,
           media: { photos: photos.map((photo) => photo.path) },
@@ -212,15 +212,24 @@ export function CreateProfileScreen() {
           <Text style={styles.label}>Relationship status</Text>
           <OptionGroup options={relationshipOptions} value={relationshipStatus} onChange={setRelationshipStatus} disabled={submitting} />
 
-          <Text style={styles.label}>Location</Text>
-          <TextInput
-            style={styles.input}
-            value={location}
-            onChangeText={setLocation}
-            placeholder="City, Country"
-            placeholderTextColor={cupidTheme.colors.textMuted}
-            editable={!submitting}
-          />
+          <Text style={styles.label}>Instagram handle</Text>
+          <View style={styles.instagramContainer}>
+            <Text style={styles.instagramPrefix}>@</Text>
+            <TextInput
+              style={[styles.input, styles.instagramInput]}
+              value={instagramHandle}
+              onChangeText={(text) => {
+                // Remove @ if user tries to add it, we'll add it automatically
+                const cleaned = text.replace(/^@+/, '');
+                setInstagramHandle(cleaned);
+              }}
+              placeholder="username"
+              placeholderTextColor={cupidTheme.colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!submitting}
+            />
+          </View>
 
           <View style={styles.toggleRow}>
             <View>
@@ -427,6 +436,26 @@ const styles = StyleSheet.create({
   helper: {
     color: cupidTheme.colors.textMuted,
     marginBottom: 8,
+  },
+  instagramContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    borderRadius: cupidTheme.radii.lg,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.border,
+    paddingLeft: 18,
+  },
+  instagramPrefix: {
+    color: cupidTheme.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  instagramInput: {
+    flex: 1,
+    borderWidth: 0,
+    paddingLeft: 4,
+    margin: 0,
   },
   optionGroup: {
     flexDirection: 'row',

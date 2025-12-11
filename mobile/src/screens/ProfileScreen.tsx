@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList>;
@@ -30,6 +30,7 @@ export function ProfileScreen() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const galleryWidth = Dimensions.get('window').width - 64;
   const allPhotos = profile?.photos ?? [];
 
@@ -94,35 +95,82 @@ export function ProfileScreen() {
   };
 
   const confirmDeleteAccount = () => {
-    Alert.alert(
-      'Delete account',
-      'Are you sure you want to delete your account? This action cannot be undone. Your account and all associated data (matches, messages, etc.) will be permanently removed from the database.',
-      [
-        { 
-          text: 'Cancel', 
-          style: 'cancel',
-          onPress: () => {
-            // User cancelled, do nothing
-          }
-        },
-        { 
-          text: 'Yes, delete it', 
-          style: 'destructive', 
-          onPress: () => {
-            deleteAccount().catch((err) => {
-              console.error('Delete account error:', err);
-            });
-          }
-        },
-      ],
-      { cancelable: true }
-    );
+    console.log('confirmDeleteAccount called, deleting state:', deleting);
+    
+    if (deleting) {
+      console.log('Already deleting, returning early');
+      return; // Prevent multiple simultaneous delete attempts
+    }
+    
+    // Use Modal for web, Alert for native
+    if (Platform.OS === 'web') {
+      console.log('Web platform detected, using Modal');
+      setShowDeleteConfirm(true);
+    } else {
+      try {
+        console.log('About to show Alert.alert');
+        Alert.alert(
+          'Delete account',
+          'Are you sure you want to delete your account? This action cannot be undone. Your account and all associated data (matches, messages, etc.) will be permanently removed from the database.',
+          [
+            { 
+              text: 'Cancel', 
+              style: 'cancel',
+              onPress: () => {
+                console.log('Delete account cancelled by user');
+              }
+            },
+            { 
+              text: 'Yes, delete it', 
+              style: 'destructive', 
+              onPress: async () => {
+                console.log('Delete account confirmed by user');
+                try {
+                  await deleteAccount();
+                } catch (err) {
+                  // Error is already handled in deleteAccount, but ensure it's caught
+                  console.error('Delete account promise rejection:', err);
+                }
+              }
+            },
+          ],
+          { cancelable: true }
+        );
+        console.log('Alert.alert called successfully');
+      } catch (error) {
+        console.error('Error showing Alert:', error);
+        // Fallback: use Modal
+        setShowDeleteConfirm(true);
+      }
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    setShowDeleteConfirm(false);
+    try {
+      await deleteAccount();
+    } catch (err) {
+      console.error('Delete account promise rejection:', err);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    console.log('Delete account cancelled by user');
+    setShowDeleteConfirm(false);
   };
 
   const deleteAccount = async () => {
     try {
+      console.log('Starting account deletion...');
       setDeleting(true);
+      setError(null);
+      
       const token = await getAccessToken();
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
+
+      console.log('Sending DELETE request to API...');
       const response = await fetch(`${API_BASE_URL}/api/profile/me`, {
         method: 'DELETE',
         headers: {
@@ -130,16 +178,37 @@ export function ProfileScreen() {
         },
       });
 
+      console.log('Delete response status:', response.status);
+
       if (!response.ok && response.status !== 204) {
-        throw new Error(await extractError(response));
+        const errorMessage = await extractError(response);
+        console.error('Delete failed with error:', errorMessage);
+        throw new Error(errorMessage);
       }
 
+      console.log('Account deleted successfully, logging out...');
+      // Account deleted successfully - logout and navigate to login
       await logout();
+      console.log('Logout completed');
     } catch (err) {
-      Alert.alert('Delete failed', err instanceof Error ? err.message : 'Unable to delete the account right now.');
-      if (err instanceof Error && err.message.toLowerCase().includes('session')) {
-        await logout().catch(() => undefined);
-      }
+      const errorMessage = err instanceof Error ? err.message : 'Unable to delete the account right now.';
+      console.error('Delete account error:', err);
+      
+      Alert.alert(
+        'Delete failed',
+        errorMessage,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // If session is invalid, force logout
+              if (err instanceof Error && err.message.toLowerCase().includes('session')) {
+                logout().catch(() => undefined);
+              }
+            }
+          }
+        ]
+      );
     } finally {
       setDeleting(false);
     }
@@ -195,12 +264,51 @@ export function ProfileScreen() {
             <Pressable style={styles.secondaryButton} onPress={handleEdit} disabled={!profile}>
               <Text style={styles.secondaryButtonLabel}>Edit profile</Text>
             </Pressable>
-            <Pressable style={[styles.button, deleting && styles.buttonDisabled]} onPress={confirmDeleteAccount} disabled={deleting}>
+            <Pressable 
+              style={[styles.button, deleting && styles.buttonDisabled]} 
+              onPress={(e) => {
+                e?.preventDefault?.();
+                console.log('Delete account button pressed - Platform:', Platform.OS);
+                console.log('Button disabled?', deleting);
+                if (!deleting) {
+                  confirmDeleteAccount();
+                } else {
+                  console.log('Button is disabled, not calling confirmDeleteAccount');
+                }
+              }} 
+              disabled={deleting}
+              accessibilityLabel="Delete account"
+              accessibilityRole="button"
+            >
               <Text style={styles.buttonLabel}>{deleting ? 'Deleting…' : 'Delete account'}</Text>
             </Pressable>
           </View>
         </View>
       </ScrollView>
+      
+      <Modal
+        visible={showDeleteConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={handleDeleteCancel}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Delete account</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to delete your account? This action cannot be undone. Your account and all associated data (matches, messages, etc.) will be permanently removed from the database.
+            </Text>
+            <View style={styles.modalActions}>
+              <Pressable style={styles.modalCancelButton} onPress={handleDeleteCancel}>
+                <Text style={styles.modalCancelLabel}>Cancel</Text>
+              </Pressable>
+              <Pressable style={styles.modalDeleteButton} onPress={handleDeleteConfirm}>
+                <Text style={styles.modalDeleteLabel}>Yes, delete it</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -341,6 +449,61 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: cupidTheme.colors.error,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalCard: {
+    backgroundColor: cupidTheme.colors.surface,
+    borderRadius: cupidTheme.radii.xl,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    ...cardShadow('floating'),
+    gap: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: cupidTheme.colors.textPrimary,
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: cupidTheme.colors.textSecondary,
+    lineHeight: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalCancelButton: {
+    flex: 1,
+    borderRadius: cupidTheme.radii.lg,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+  },
+  modalCancelLabel: {
+    color: cupidTheme.colors.textPrimary,
+    fontWeight: '700',
+  },
+  modalDeleteButton: {
+    flex: 1,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.error,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalDeleteLabel: {
+    color: cupidTheme.colors.surface,
+    fontWeight: '800',
   },
 });
 
