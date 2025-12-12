@@ -30,6 +30,7 @@ export function SwipeScreen() {
   const [actionLoading, setActionLoading] = useState(false);
   const [hasSwipesToRewind, setHasSwipesToRewind] = useState(false);
   const [swipeCount, setSwipeCount] = useState(0); // Track swipes made in this session
+  const [hasMadeFirstSwipe, setHasMadeFirstSwipe] = useState(false); // Track if user has swiped at least once
 
   const fetchDeck = useCallback(async () => {
     try {
@@ -55,32 +56,16 @@ export function SwipeScreen() {
     }
   }, [getAccessToken]);
 
-  // Check if there are existing swipes to rewind on mount
-  useEffect(() => {
-    const checkForExistingSwipes = async () => {
-      try {
-        const token = await getAccessToken();
-        // Make a test call to see if rewind would work
-        // We can't actually check without rewinding, so we'll check after the first interaction
-        // For now, we'll start with false and let user actions determine it
-      } catch (err) {
-        // Silently fail
-      }
-    };
-    checkForExistingSwipes();
-  }, [getAccessToken]);
-
   useFocusEffect(
     useCallback(() => {
       fetchDeck();
-      // Reset swipeCount when screen is focused
-      // hasSwipesToRewind will be determined by checking if rewind works
-      setSwipeCount(0);
-      // Check if there are existing swipes by attempting a rewind check
-      // But we can't check without rewinding, so we'll start hidden
-      // and let the first swipe or rewind attempt determine the state
-      setHasSwipesToRewind(false);
-    }, [fetchDeck])
+      // Only reset hasSwipesToRewind if user hasn't made their first swipe yet
+      // This prevents showing rewind button for the first person
+      // After first swipe, hasSwipesToRewind will persist across navigation
+      if (!hasMadeFirstSwipe) {
+        setHasSwipesToRewind(false);
+      }
+    }, [fetchDeck, hasMadeFirstSwipe])
   );
 
   const currentProfile = deck[0];
@@ -120,6 +105,8 @@ export function SwipeScreen() {
 
       // After a successful swipe, there are now swipes to rewind
       setSwipeCount((prev) => prev + 1);
+      setHasMadeFirstSwipe(true); // Mark that user has made at least one swipe
+      // Set hasSwipesToRewind to true after first swipe, and it will persist across navigation
       setHasSwipesToRewind(true);
 
       setDeck((prev) => {
@@ -202,7 +189,7 @@ export function SwipeScreen() {
             onLike={() => handleSwipe('RIGHT')}
             actionLoading={actionLoading}
           />
-          {hasSwipesToRewind && (
+          {hasSwipesToRewind && hasMadeFirstSwipe && (
             <Pressable style={styles.rewindButton} onPress={handleRewind} disabled={actionLoading}>
               <Text style={styles.rewindLabel}>Rewind</Text>
             </Pressable>
@@ -215,7 +202,7 @@ export function SwipeScreen() {
           <Pressable style={styles.secondaryButton} onPress={fetchDeck}>
             <Text style={styles.secondaryButtonLabel}>Refresh</Text>
           </Pressable>
-          {hasSwipesToRewind && (
+          {hasSwipesToRewind && hasMadeFirstSwipe && (
             <Pressable style={styles.rewindButton} onPress={handleRewind} disabled={actionLoading}>
               <Text style={styles.rewindLabel}>Rewind</Text>
             </Pressable>

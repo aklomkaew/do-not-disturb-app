@@ -177,6 +177,7 @@ export function CreateProfileScreen() {
                       source={{ uri: photoUri }} 
                       style={styles.photo}
                       resizeMode="cover"
+                      fadeDuration={150}
                     />
                   ) : (
                     <View style={[styles.photo, styles.photoPlaceholder]}>

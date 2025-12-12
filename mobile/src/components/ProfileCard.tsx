@@ -39,14 +39,10 @@ export function ProfileCard({
   
   // Responsive dimensions
   const cardWidth = SCREEN_WIDTH - (CARD_PADDING * 2);
-  const photoHeight = variant === 'compact' ? 240 : variant === 'detailed' ? 420 : 360;
+  // Responsive photo heights with good aspect ratios
+  const photoHeight = variant === 'compact' ? 280 : variant === 'detailed' ? 480 : 400;
   const isCompact = variant === 'compact';
   const isDetailed = variant === 'detailed';
-  
-  // Calculate photo width accounting for card's internal padding
-  // Default padding: 24px, Compact: 20px, Detailed: 32px (each side, so *2)
-  const cardPadding = isDetailed ? 32 : isCompact ? 20 : 24;
-  const photoWidth = cardWidth - (cardPadding * 2);
 
   const cardContent = (
     <View style={[styles.card, isCompact && styles.cardCompact, isDetailed && styles.cardDetailed]}>
@@ -55,7 +51,6 @@ export function ProfileCard({
         <View style={styles.photoWrapper}>
           <PhotoCarousel 
             photos={photos} 
-            width={photoWidth} 
             height={photoHeight}
           />
         </View>

@@ -116,7 +116,16 @@ export function MatchesScreen() {
         renderItem={({ item }) => (
           <Pressable onPress={() => setSelectedMatch(item)}>
             <View style={styles.card}>
-              {item.partner.photos?.[0] ? <Image source={{ uri: item.partner.photos[0] }} style={styles.photo} /> : null}
+              {item.partner.photos?.[0] ? (
+                <View style={styles.photoContainer}>
+                  <Image 
+                    source={{ uri: item.partner.photos[0] }} 
+                    style={styles.photo}
+                    resizeMode="cover"
+                    fadeDuration={150}
+                  />
+                </View>
+              ) : null}
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cardTitle}>
@@ -218,13 +227,19 @@ const styles = StyleSheet.create({
     color: cupidTheme.colors.textPrimary,
     letterSpacing: -0.3,
   },
-  photo: {
+  photoContainer: {
     width: '100%',
     height: 160,
     borderRadius: cupidTheme.radii.md,
     backgroundColor: cupidTheme.colors.surfaceMuted,
     marginBottom: 12,
-    resizeMode: 'cover',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photo: {
+    width: '100%',
+    height: '100%',
   },
   stateCard: {
     padding: 32,

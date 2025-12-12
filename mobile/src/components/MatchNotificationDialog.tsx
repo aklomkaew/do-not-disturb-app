@@ -115,7 +115,12 @@ export function MatchNotificationDialog({
             {/* Profile Photo */}
             {matchedProfile.photo ? (
               <View style={styles.photoContainer}>
-                <Image source={{ uri: matchedProfile.photo }} style={styles.photo} />
+                <Image 
+                  source={{ uri: matchedProfile.photo }} 
+                  style={styles.photo}
+                  resizeMode="cover"
+                  fadeDuration={150}
+                />
               </View>
             ) : (
               <View style={[styles.photoContainer, styles.photoPlaceholder]}>
@@ -212,12 +217,13 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: cupidTheme.colors.accent,
     marginTop: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...cardShadow('floating'),
   },
   photo: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
   },
   photoPlaceholder: {
     backgroundColor: cupidTheme.colors.surfaceMuted,

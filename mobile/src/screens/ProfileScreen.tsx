@@ -201,7 +201,12 @@ export function ProfileScreen() {
           <View style={styles.profileHeader}>
             <View style={styles.avatarContainer}>
               {allPhotos.length > 0 && allPhotos[0] ? (
-                <Image source={{ uri: allPhotos[0] }} style={styles.avatar} />
+                <Image 
+                  source={{ uri: allPhotos[0] }} 
+                  style={styles.avatar}
+                  resizeMode="cover"
+                  fadeDuration={150}
+                />
               ) : (
                 <View style={[styles.avatar, styles.avatarPlaceholder]}>
                   <Ionicons name="person" size={40} color={cupidTheme.colors.border} />
@@ -325,11 +330,12 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: cupidTheme.colors.accentSoft,
     backgroundColor: cupidTheme.colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatar: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
   },
   avatarPlaceholder: {
     backgroundColor: cupidTheme.colors.surfaceMuted,
