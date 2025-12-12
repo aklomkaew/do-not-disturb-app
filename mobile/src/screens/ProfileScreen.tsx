@@ -1,5 +1,4 @@
 import { ScreenContainer } from '@/components/ScreenContainer';
-import { PhotoCarousel } from '@/components/PhotoCarousel';
 import { API_BASE_URL } from '@/constants/config';
 import type { AuthStackParamList } from '@/navigation/AuthenticatedNavigator';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,6 +7,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -31,7 +31,6 @@ export function ProfileScreen() {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const galleryWidth = Dimensions.get('window').width - 64;
   const allPhotos = profile?.photos ?? [];
 
   const fetchProfile = useCallback(async () => {
@@ -198,24 +197,22 @@ export function ProfileScreen() {
     <ScreenContainer scrollable={false}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.card}>
-          {allPhotos.length > 0 ? (
-            <View style={styles.gallery}>
-              <PhotoCarousel photos={allPhotos} width={galleryWidth} height={260} />
-              {allPhotos.length > 1 ? (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.thumbRow}>
-                  {allPhotos.map((uri) => (
-                    <Image key={uri} source={{ uri }} style={styles.thumb} />
-                  ))}
-                </ScrollView>
-              ) : null}
+          {/* Profile Avatar */}
+          <View style={styles.profileHeader}>
+            <View style={styles.avatarContainer}>
+              {allPhotos.length > 0 && allPhotos[0] ? (
+                <Image source={{ uri: allPhotos[0] }} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                  <Ionicons name="person" size={40} color={cupidTheme.colors.border} />
+                </View>
+              )}
             </View>
-          ) : (
-            <View style={[styles.photoFallback, { width: galleryWidth }]}>
-              <Text style={styles.photoFallbackText}>Add photos to showcase yourself.</Text>
+            <View style={styles.profileHeaderText}>
+              <Text style={styles.heading}>Profile & Settings</Text>
+              <Text style={styles.copy}>You are signed in as {user?.email ?? user?.phoneNumber ?? 'unknown user'}.</Text>
             </View>
-          )}
-          <Text style={styles.heading}>Profile & Settings</Text>
-          <Text style={styles.copy}>You are signed in as {user?.email ?? user?.phoneNumber ?? 'unknown user'}.</Text>
+          </View>
 
           {status === 'loading' ? (
             <ActivityIndicator color={cupidTheme.colors.accent} style={{ marginTop: 16 }} />
@@ -314,36 +311,34 @@ const styles = StyleSheet.create({
     borderColor: cupidTheme.colors.borderSubtle,
     ...cardShadow(),
   },
-  gallery: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  thumbRow: {
-    flexGrow: 0,
-  },
-  thumb: {
-    width: 64,
-    height: 64,
-    borderRadius: cupidTheme.radii.md,
-    marginRight: 8,
-    backgroundColor: cupidTheme.colors.surfaceMuted,
-  },
-  photoFallback: {
-    height: 220,
-    borderRadius: cupidTheme.radii.lg,
-    backgroundColor: cupidTheme.colors.surfaceMuted,
+  profileHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: cupidTheme.colors.border,
+    gap: 16,
+    marginBottom: 4,
   },
-  photoFallbackText: {
-    color: cupidTheme.colors.textMuted,
-    fontWeight: '700',
-    fontSize: 15,
-    textAlign: 'center',
-    paddingHorizontal: 20,
+  avatarContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: cupidTheme.colors.accentSoft,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  avatarPlaceholder: {
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileHeaderText: {
+    flex: 1,
+    gap: 4,
   },
   heading: {
     fontSize: 26,
