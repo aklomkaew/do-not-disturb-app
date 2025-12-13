@@ -11,6 +11,10 @@
     "prisma:migrate": "prisma migrate dev",
     "lint": "tsc --noEmit"
   },
+  "overrides": {
+    "glob": "^13.0.0",
+    "rimraf": "^5.0.10"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -20,12 +24,15 @@
     "@supabase/storage-js": "^2.6.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "expo": "^54.0.33",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "libphonenumber-js": "^1.12.31",
     "pg": "^8.16.3",
+    "react-native-web": "^0.21.0",
     "resend": "^6.5.2",
+    "run": "^1.5.0",
     "twilio": "^5.10.7",
     "zod": "^4.1.13"
   },

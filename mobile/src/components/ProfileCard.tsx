@@ -2,14 +2,24 @@ import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { PhotoCarousel } from './PhotoCarousel';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { formatLocation, formatLocationCompact } from '@/utils/locationHelpers';
+import { formatGender, formatRelationshipStatus } from '@/utils/profileHelpers';
+import { FunQuestionsDisplay } from './FunQuestionsDisplay';
+import type { FunQuestionsAnswers } from './FunQuestions';
 
 export type ProfileCardData = {
   id: string;
   displayName: string;
   age: number;
+  gender?: string;
+  relationshipStatus?: string;
   location: string | null;
   bio: string;
+  instagramHandle?: string | null;
   photos?: string[];
+  preferences?: {
+    funQuestions?: FunQuestionsAnswers;
+  };
 };
 
 type ProfileCardProps = {
@@ -73,14 +83,6 @@ export function ProfileCard({
               {profile.age}
             </Text>
           </View>
-          {!isCompact && (
-            <View style={styles.locationChip}>
-              <Ionicons name="location-outline" size={14} color={cupidTheme.colors.accent} />
-              <Text style={styles.locationText} numberOfLines={1}>
-                {profile.location ?? 'Location not set'}
-              </Text>
-            </View>
-          )}
         </View>
 
         {/* Location (for compact variant) */}
@@ -88,7 +90,43 @@ export function ProfileCard({
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={12} color={cupidTheme.colors.textMuted} />
             <Text style={styles.locationCompact} numberOfLines={1}>
-              {profile.location ?? 'Somewhere on Earth'}
+              {formatLocationCompact(profile.location)}
+            </Text>
+          </View>
+        )}
+
+        {/* Info Chips Row (Gender, Relationship Status, Location for compact) */}
+        {(profile.gender || profile.relationshipStatus || (isCompact && profile.location)) && (
+          <View style={styles.infoChipsRow}>
+            {profile.gender && (
+              <View style={styles.infoChip}>
+                <Ionicons name="person-outline" size={13} color={cupidTheme.colors.textMuted} />
+                <Text style={styles.infoChipText}>{formatGender(profile.gender)}</Text>
+              </View>
+            )}
+            {profile.relationshipStatus && (
+              <View style={styles.infoChip}>
+                <Ionicons name="heart-outline" size={13} color={cupidTheme.colors.textMuted} />
+                <Text style={styles.infoChipText}>{formatRelationshipStatus(profile.relationshipStatus)}</Text>
+              </View>
+            )}
+            {isCompact && profile.location && (
+              <View style={styles.infoChip}>
+                <Ionicons name="location-outline" size={13} color={cupidTheme.colors.textMuted} />
+                <Text style={styles.infoChipText} numberOfLines={1}>
+                  {formatLocationCompact(profile.location)}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Location (for non-compact variants) */}
+        {!isCompact && profile.location && (
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={14} color={cupidTheme.colors.accent} />
+            <Text style={styles.locationFull} numberOfLines={1}>
+              {formatLocation(profile.location)}
             </Text>
           </View>
         )}
@@ -100,6 +138,22 @@ export function ProfileCard({
         >
           {profile.bio || 'No bio provided'}
         </Text>
+
+        {/* Instagram Handle */}
+        {profile.instagramHandle && (
+          <View style={styles.instagramRow}>
+            <Ionicons name="logo-instagram" size={16} color={cupidTheme.colors.accent} />
+            <Text style={styles.instagramText}>@{profile.instagramHandle}</Text>
+          </View>
+        )}
+
+        {/* Fun Questions */}
+        {profile.preferences?.funQuestions && (
+          <FunQuestionsDisplay 
+            answers={profile.preferences.funQuestions} 
+            variant={variant}
+          />
+        )}
 
         {/* Action Buttons */}
         {showActions && (onLike || onPass) && (
@@ -245,6 +299,49 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: cupidTheme.colors.textMuted,
     fontWeight: '500',
+  },
+  locationFull: {
+    fontSize: 14,
+    color: cupidTheme.colors.textSecondary,
+    fontWeight: '600',
+  },
+  infoChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 2,
+  },
+  infoChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: cupidTheme.radii.pill,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+  },
+  infoChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: cupidTheme.colors.textSecondary,
+  },
+  instagramRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    borderRadius: cupidTheme.radii.md,
+    alignSelf: 'flex-start',
+  },
+  instagramText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: cupidTheme.colors.accent,
   },
   bio: {
     fontSize: 15,

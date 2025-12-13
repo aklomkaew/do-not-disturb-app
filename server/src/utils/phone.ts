@@ -1,7 +1,12 @@
-import { parsePhoneNumberFromString } from 'libphonenumber-js';
+import { createRequire } from 'node:module';
+import { parsePhoneNumberFromString } from 'libphonenumber-js/core';
+
+const require = createRequire(import.meta.url);
+// require() loads raw JSON directly, avoiding ESM { default } wrapper that breaks libphonenumber-js
+const phoneMetadata = require('libphonenumber-js/metadata.min.json');
 
 export function normalizePhoneNumber(input: string) {
-  const parsed = parsePhoneNumberFromString(input);
+  const parsed = parsePhoneNumberFromString(input, phoneMetadata);
   if (!parsed || !parsed.isValid()) {
     throw Object.assign(new Error('Invalid phone number'), { status: 400 });
   }

@@ -1,10 +1,12 @@
 import { ScreenContainer } from '@/components/ScreenContainer';
+import { LocationPicker } from '@/components/LocationPicker';
+import { FunQuestions, type FunQuestionsAnswers } from '@/components/FunQuestions';
 import { API_BASE_URL } from '@/constants/config';
 import type { AuthStackParamList } from '@/navigation/AuthenticatedNavigator';
 import { useAuth } from '@/hooks/useAuth';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
@@ -28,6 +30,7 @@ export function ProfileEditorScreen() {
   const [age, setAge] = useState(String(initialProfile.age ?? ''));
   const [gender, setGender] = useState(initialProfile.gender);
   const [relationshipStatus, setRelationshipStatus] = useState(initialProfile.relationshipStatus);
+  const [location, setLocation] = useState<string | null>(initialProfile.location ?? null);
   const [bio, setBio] = useState(initialProfile.bio ?? '');
   const [instagramHandle, setInstagramHandle] = useState(initialProfile.instagramHandle ?? '');
   const [notifyMatches, setNotifyMatches] = useState(initialProfile.matchNotificationsEnabled);
@@ -37,6 +40,30 @@ export function ProfileEditorScreen() {
   const [photos, setPhotos] = useState<PhotoEntry[]>(initialPhotos);
   const [uploading, setUploading] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [funQuestions, setFunQuestions] = useState<FunQuestionsAnswers>({});
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+
+  // Load preferences (including fun questions) from API
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        const token = await getAccessToken();
+        const response = await fetch(`${API_BASE_URL}/api/profile/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const prefs = data.profile.preferences || {};
+          setFunQuestions(prefs.funQuestions || {});
+        }
+      } catch (err) {
+        // Silently fail, will use empty state
+      } finally {
+        setPreferencesLoaded(true);
+      }
+    };
+    loadPreferences();
+  }, [getAccessToken]);
 
   // Track if changes were made
   const hasChanges = useMemo(() => {
@@ -49,12 +76,13 @@ export function ProfileEditorScreen() {
       age.trim() !== initialAge.trim() ||
       gender !== initialProfile.gender ||
       relationshipStatus !== initialProfile.relationshipStatus ||
+      location !== (initialProfile.location ?? null) ||
       bio.trim() !== (initialProfile.bio ?? '').trim() ||
       (instagramHandle.trim() !== (initialProfile.instagramHandle ?? '').trim()) ||
       notifyMatches !== initialProfile.matchNotificationsEnabled ||
       initialPhotosPaths !== currentPhotosPaths
     );
-  }, [displayName, age, gender, relationshipStatus, bio, instagramHandle, notifyMatches, photos, initialProfile, initialPhotos]);
+  }, [displayName, age, gender, relationshipStatus, location, bio, instagramHandle, notifyMatches, photos, initialProfile, initialPhotos]);
 
   const handleInstagramChange = (text: string) => {
     // Remove @ if user tries to add it, we'll add it automatically
@@ -169,20 +197,54 @@ export function ProfileEditorScreen() {
       setError(null);
 
       const token = await getAccessToken();
+      // Clean funQuestions - remove undefined values, null, and empty arrays/strings
+      const cleanedFunQuestions: Record<string, unknown> = {};
+      Object.entries(funQuestions).forEach(([key, value]) => {
+        // Skip undefined, null, empty strings, and empty arrays
+        if (value === undefined || value === null) return;
+        
+        if (Array.isArray(value)) {
+          // Filter out undefined/null and only include if has valid items
+          const filtered = value.filter(v => v !== undefined && v !== null && v !== '');
+          if (filtered.length > 0) {
+            cleanedFunQuestions[key] = filtered;
+          }
+        } else if (typeof value === 'string') {
+          // Only include non-empty strings
+          const trimmed = value.trim();
+          if (trimmed.length > 0) {
+            cleanedFunQuestions[key] = trimmed;
+          }
+        } else if (value !== '') {
+          // Include other valid types (but not empty strings)
+          cleanedFunQuestions[key] = value;
+        }
+      });
+
       const payload: Record<string, unknown> = {
         displayName: displayName.trim(),
         gender,
         relationshipStatus,
+        location: location?.trim() || null,
         bio: bio.trim(),
         instagramHandle: instagramHandle.trim() || null,
         matchNotificationsEnabled: notifyMatches,
         media: { photos: photos.map((photo) => photo.path) },
       };
 
+      // Only include preferences if we have at least one valid fun question answer
+      // Don't send empty objects which can cause Zod validation issues
+      if (Object.keys(cleanedFunQuestions).length > 0) {
+        payload.preferences = { funQuestions: cleanedFunQuestions };
+      }
+
       if (age.trim().length > 0) {
         payload.age = Number(age);
       }
 
+      // Debug: log the payload before sending
+      console.log('Profile update payload:', JSON.stringify(payload, null, 2));
+      
       const response = await fetch(`${API_BASE_URL}/api/profile/me`, {
         method: 'PATCH',
         headers: {
@@ -193,7 +255,29 @@ export function ProfileEditorScreen() {
       });
 
       if (!response.ok) {
-        const errorMsg = await extractError(response);
+        const errorText = await response.text();
+        console.error('Profile update error response:', errorText);
+        let errorMsg = 'Failed to update profile';
+        try {
+          const errorJson = JSON.parse(errorText);
+          // Handle different error response formats
+          if (typeof errorJson === 'string') {
+            errorMsg = errorJson;
+          } else if (errorJson?.error?.message) {
+            errorMsg = errorJson.error.message;
+          } else if (errorJson?.message) {
+            errorMsg = errorJson.message;
+          } else if (errorJson?.error) {
+            errorMsg = typeof errorJson.error === 'string' ? errorJson.error : JSON.stringify(errorJson.error);
+          } else {
+            errorMsg = JSON.stringify(errorJson);
+          }
+        } catch {
+          // If not JSON, try to extract meaningful text or use default
+          if (errorText && errorText.length < 500) {
+            errorMsg = errorText;
+          }
+        }
         throw new Error(errorMsg);
       }
 
@@ -205,7 +289,23 @@ export function ProfileEditorScreen() {
       // Navigate back - this will trigger useFocusEffect in ProfileScreen to refresh
       navigation.goBack();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
+      let errorMessage = 'Failed to update profile';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err && typeof err === 'object') {
+        // Handle error objects - try to extract a meaningful message
+        const errObj = err as any;
+        if (errObj.message) {
+          errorMessage = String(errObj.message);
+        } else if (errObj.error) {
+          errorMessage = typeof errObj.error === 'string' ? errObj.error : String(errObj.error);
+        } else {
+          errorMessage = JSON.stringify(errObj);
+        }
+      }
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -213,7 +313,11 @@ export function ProfileEditorScreen() {
 
   return (
     <ScreenContainer scrollable={false}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView 
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
+      >
         <View style={styles.header}>
           <Text style={styles.heading}>Edit profile</Text>
           <Pressable onPress={handleCancel} style={styles.cancelButton}>
@@ -303,6 +407,10 @@ export function ProfileEditorScreen() {
         <Text style={styles.label}>Relationship status</Text>
         <OptionGroup options={relationshipOptions} value={relationshipStatus} onChange={setRelationshipStatus} />
 
+        <Text style={styles.label}>Location</Text>
+        <Text style={styles.helper}>Select your NYC neighborhood.</Text>
+        <LocationPicker value={location} onChange={setLocation} disabled={submitting} />
+
         <Text style={styles.label}>Instagram handle</Text>
         <View style={styles.instagramContainer} pointerEvents="box-none">
           <Text style={styles.instagramPrefix}>@</Text>
@@ -330,6 +438,14 @@ export function ProfileEditorScreen() {
           multiline
           numberOfLines={4}
         />
+
+        {preferencesLoaded && (
+          <FunQuestions 
+            answers={funQuestions} 
+            onChange={setFunQuestions}
+            disabled={submitting}
+          />
+        )}
 
         <View style={styles.toggleRow}>
           <View style={{ flex: 1 }}>

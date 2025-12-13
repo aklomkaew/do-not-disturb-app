@@ -1,5 +1,7 @@
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { StatusBanner } from '@/components/StatusBanner';
+import { LocationPicker } from '@/components/LocationPicker';
+import { FunQuestions, type FunQuestionsAnswers } from '@/components/FunQuestions';
 import { API_BASE_URL } from '@/constants/config';
 import type { AuthStackParamList } from '@/navigation/AuthenticatedNavigator';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,8 +30,10 @@ export function CreateProfileScreen() {
   const [age, setAge] = useState('');
   const [gender, setGender] = useState<typeof genderOptions[number]>('OTHER');
   const [relationshipStatus, setRelationshipStatus] = useState<typeof relationshipOptions[number]>('SINGLE');
+  const [location, setLocation] = useState<string | null>(null);
   const [instagramHandle, setInstagramHandle] = useState('');
   const [bio, setBio] = useState('');
+  const [funQuestions, setFunQuestions] = useState<FunQuestionsAnswers>({});
   const [notifyMatches, setNotifyMatches] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,16 +119,46 @@ export function CreateProfileScreen() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          displayName: displayName.trim(),
-          age: parsedAge,
-          gender,
-          relationshipStatus,
-          instagramHandle: instagramHandle.trim() || null,
-          bio: bio.trim(),
-          matchNotificationsEnabled: notifyMatches,
-          media: { photos: photos.map((photo) => photo.path) },
-        }),
+        body: JSON.stringify((() => {
+          // Clean funQuestions - remove undefined values, null, and empty arrays/strings
+          const cleanedFunQuestions: Record<string, unknown> = {};
+          Object.entries(funQuestions).forEach(([key, value]) => {
+            if (value === undefined || value === null) return;
+            
+            if (Array.isArray(value)) {
+              const filtered = value.filter(v => v !== undefined && v !== null && v !== '');
+              if (filtered.length > 0) {
+                cleanedFunQuestions[key] = filtered;
+              }
+            } else if (typeof value === 'string') {
+              const trimmed = value.trim();
+              if (trimmed.length > 0) {
+                cleanedFunQuestions[key] = trimmed;
+              }
+            } else if (value !== '') {
+              cleanedFunQuestions[key] = value;
+            }
+          });
+
+          const payload: Record<string, unknown> = {
+            displayName: displayName.trim(),
+            age: parsedAge,
+            gender,
+            relationshipStatus,
+            location: location?.trim() || null,
+            instagramHandle: instagramHandle.trim() || null,
+            bio: bio.trim(),
+            matchNotificationsEnabled: notifyMatches,
+            media: { photos: photos.map((photo) => photo.path) },
+          };
+
+          // Only include preferences if we have at least one valid fun question answer
+          if (Object.keys(cleanedFunQuestions).length > 0) {
+            payload.preferences = { funQuestions: cleanedFunQuestions };
+          }
+
+          return payload;
+        })()),
       });
 
       if (!response.ok) {
@@ -144,7 +178,11 @@ export function CreateProfileScreen() {
 
   return (
     <ScreenContainer scrollable={false}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView 
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
+      >
         <StatusBanner status={status} timestamp={timestamp} />
         <View style={styles.hero}>
           <Text style={styles.kicker}>Create your profile</Text>
@@ -262,6 +300,10 @@ export function CreateProfileScreen() {
           <Text style={styles.label}>Relationship status</Text>
           <OptionGroup options={relationshipOptions} value={relationshipStatus} onChange={setRelationshipStatus} disabled={submitting} />
 
+          <Text style={styles.label}>Location</Text>
+          <Text style={styles.helper}>Optional. Select your NYC neighborhood.</Text>
+          <LocationPicker value={location} onChange={setLocation} disabled={submitting} />
+
           <Text style={styles.label}>Instagram handle</Text>
           <Text style={styles.helper}>Optional. Share your Instagram to help others connect with you.</Text>
           <View style={styles.instagramContainer} pointerEvents="box-none">
@@ -322,6 +364,12 @@ export function CreateProfileScreen() {
           {bio.trim().length > 0 && bio.trim().length < 20 && (
             <Text style={styles.fieldError}>Please write at least 20 characters to help others get to know you</Text>
           )}
+
+          <FunQuestions 
+            answers={funQuestions} 
+            onChange={setFunQuestions}
+            disabled={submitting}
+          />
 
           {error ? (
             <View style={styles.errorContainer}>

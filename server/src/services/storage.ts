@@ -9,11 +9,26 @@ const storageClient = new StorageClient(`${env.SUPABASE_URL}/storage/v1`, {
 const bucket = env.SUPABASE_BUCKET;
 
 export async function createSignedUpload(path: string) {
-  const { data, error } = await storageClient.from(bucket).createSignedUploadUrl(path);
-  if (error || !data) {
-    throw Object.assign(new Error(error?.message ?? 'Failed to create upload URL'), { status: 500 });
+  try {
+    const { data, error } = await storageClient.from(bucket).createSignedUploadUrl(path);
+    if (error || !data) {
+      throw Object.assign(new Error(error?.message ?? 'Failed to create upload URL'), { status: 500 });
+    }
+    return { uploadUrl: data.signedUrl, path };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Storage request failed';
+    const cause = err instanceof Error && err.cause ? String(err.cause) : '';
+    if (msg === 'fetch failed' || msg.includes('fetch')) {
+      throw Object.assign(
+        new Error(
+          'Photo storage unavailable. Ensure SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY are correct and the "profiles" bucket exists in your Supabase project.' +
+            (cause ? ` (${cause})` : '')
+        ),
+        { status: 503 }
+      );
+    }
+    throw err;
   }
-  return { uploadUrl: data.signedUrl, path };
 }
 
 export async function signedUrl(path: string, expiresIn = 3600) {

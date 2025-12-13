@@ -33,7 +33,12 @@ uploadsRouter.post('/profile-photo-url', async (req, res, next) => {
 
     res.json({ uploadUrl, path });
   } catch (error) {
-    next(error);
+    const status = (error as { status?: number })?.status ?? 500;
+    const msg = error instanceof Error ? error.message : 'Upload failed';
+    const message = msg.includes('storage') || msg.includes('Supabase')
+      ? 'Photo storage is not configured. Set up Supabase storage to upload photos.'
+      : msg;
+    res.status(status).json({ message });
   }
 });
 

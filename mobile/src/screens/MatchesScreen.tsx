@@ -20,6 +20,7 @@ import {
 import { cupidTheme, cardShadow } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { updateMatchesCount } from '@/hooks/useMatchesCount';
+import { formatLocationCompact } from '@/utils/locationHelpers';
 
 type MatchItem = {
   id: string;
@@ -28,8 +29,14 @@ type MatchItem = {
     id: string;
     displayName: string;
     age: number;
+    gender?: string;
+    relationshipStatus?: string;
     location: string | null;
     bio: string;
+    instagramHandle?: string | null;
+    preferences?: {
+      funQuestions?: import('@/components/FunQuestions').FunQuestionsAnswers;
+    };
     photos?: string[];
     photoPaths?: string[];
   };
@@ -131,7 +138,7 @@ export function MatchesScreen() {
                   <Text style={styles.cardTitle}>
                     {item.partner.displayName}, {item.partner.age}
                   </Text>
-                  <Text style={styles.location}>{item.partner.location ?? 'Somewhere on Earth'}</Text>
+                  <Text style={styles.location}>{formatLocationCompact(item.partner.location)}</Text>
                 </View>
                 <View style={styles.badge}>
                   <Ionicons name="calendar-outline" size={14} color={cupidTheme.colors.accent} />
@@ -172,8 +179,12 @@ export function MatchesScreen() {
                   id: selectedMatch.partner.id,
                   displayName: selectedMatch.partner.displayName,
                   age: selectedMatch.partner.age,
+                  gender: selectedMatch.partner.gender,
+                  relationshipStatus: selectedMatch.partner.relationshipStatus,
                   location: selectedMatch.partner.location,
                   bio: selectedMatch.partner.bio,
+                  instagramHandle: selectedMatch.partner.instagramHandle,
+                  preferences: selectedMatch.partner.preferences,
                   photos: selectedMatch.partner.photos,
                 } as ProfileCardData}
                 variant="detailed"

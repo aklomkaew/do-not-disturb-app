@@ -46,8 +46,12 @@ export function WelcomeScreen() {
     setError(null);
 
     (async () => {
+      const url = `${API_BASE_URL}/api/profile/me`;
+      // DEBUG: remove after fixing
+      console.log('[WelcomeScreen] profile/me fetch', { API_BASE_URL, url, hasToken: !!accessToken });
+
       try {
-        const response = await fetch(`${API_BASE_URL}/api/profile/me`, {
+        const response = await fetch(url, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -64,9 +68,12 @@ export function WelcomeScreen() {
 
         if (!cancelled) setProfileState('exists');
       } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to check profile status';
+        const cause = err instanceof Error && err.cause ? String(err.cause) : null;
+        console.error('[WelcomeScreen] profile/me fetch failed', { err, message: msg, cause, url });
         if (!cancelled) {
           setProfileState('error');
-          setError(err instanceof Error ? err.message : 'Failed to check profile status');
+          setError(cause ? `${msg} (${cause})` : msg);
         }
       }
     })();

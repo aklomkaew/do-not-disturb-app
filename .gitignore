@@ -5,6 +5,7 @@ node_modules
 !server/.env.example
 server/node_modules
 server/dist
+server/.expo
 server/.env
 mobile/node_modules
 mobile/.expo

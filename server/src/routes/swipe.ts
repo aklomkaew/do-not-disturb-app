@@ -59,8 +59,12 @@ swipeRouter.get('/deck', async (req, res, next) => {
         displayName: true,
         bio: true,
         age: true,
+        gender: true,
+        relationshipStatus: true,
         location: true,
+        instagramHandle: true,
         media: true,
+        preferences: true,
       },
     });
 
@@ -159,17 +163,31 @@ async function serializeProfileCard(profile: {
   displayName: string;
   bio: string;
   age: number;
+  gender: string;
+  relationshipStatus: string;
   location: string | null;
+  instagramHandle: string | null;
   media: unknown;
+  preferences: unknown;
 }) {
-  const { photos } = await resolveMediaPhotos(profile.media);
+  let photos: string[] = [];
+  try {
+    const resolved = await resolveMediaPhotos(profile.media);
+    photos = resolved.photos;
+  } catch (err) {
+    console.warn('[swipe] Storage signed URL failed for profile card:', err instanceof Error ? err.message : err);
+  }
 
   return {
     id: profile.id,
     displayName: profile.displayName,
     bio: profile.bio,
     age: profile.age,
+    gender: profile.gender,
+    relationshipStatus: profile.relationshipStatus,
     location: profile.location,
+    instagramHandle: profile.instagramHandle,
+    preferences: profile.preferences,
     photos,
   };
 }

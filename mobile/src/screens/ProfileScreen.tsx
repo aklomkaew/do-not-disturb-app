@@ -8,6 +8,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { cupidTheme, cardShadow } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { formatLocation } from '@/utils/locationHelpers';
 
 type Navigation = NativeStackNavigationProp<AuthStackParamList>;
 
@@ -17,6 +18,7 @@ type ProfileResponse = {
   gender: string;
   relationshipStatus: string;
   bio: string;
+  location: string | null;
   instagramHandle: string | null;
   matchNotificationsEnabled: boolean;
   photos: string[];
@@ -56,6 +58,7 @@ export function ProfileScreen() {
         gender: data.profile.gender,
         relationshipStatus: data.profile.relationshipStatus,
         bio: data.profile.bio,
+        location: data.profile.location ?? null,
         instagramHandle: data.profile.instagramHandle ?? null,
         matchNotificationsEnabled: data.profile.matchNotificationsEnabled ?? true,
         photos: data.profile.media?.photos ?? [],
@@ -85,7 +88,7 @@ export function ProfileScreen() {
         gender: profile.gender,
         relationshipStatus: profile.relationshipStatus,
         bio: profile.bio,
-        location: null, // Removed from UI
+        location: profile.location,
         instagramHandle: profile.instagramHandle,
         matchNotificationsEnabled: profile.matchNotificationsEnabled,
         photos: profile.photos,
@@ -234,6 +237,11 @@ export function ProfileScreen() {
               <Detail label="Age" value={String(profile.age)} />
               <Detail label="Gender" value={formatLabel(profile.gender)} />
               <Detail label="Relationship status" value={formatLabel(profile.relationshipStatus)} />
+              <DetailWithIcon 
+                label="Location" 
+                value={formatLocation(profile.location)} 
+                icon="location-outline"
+              />
               <Detail label="Instagram handle" value={profile.instagramHandle ? `@${profile.instagramHandle}` : 'Not set'} />
               <View style={styles.bioBlock}>
                 <Text style={styles.metaLabel}>Bio</Text>
@@ -295,6 +303,18 @@ function Detail({ label, value }: { label: string; value: string }) {
     <View style={styles.detailRow}>
       <Text style={styles.metaLabel}>{label}</Text>
       <Text style={styles.metaValue}>{value}</Text>
+    </View>
+  );
+}
+
+function DetailWithIcon({ label, value, icon }: { label: string; value: string; icon: keyof typeof Ionicons.glyphMap }) {
+  return (
+    <View style={styles.detailRow}>
+      <Text style={styles.metaLabel}>{label}</Text>
+      <View style={styles.detailValueWithIcon}>
+        <Ionicons name={icon} size={16} color={cupidTheme.colors.accent} style={styles.detailIcon} />
+        <Text style={styles.metaValue}>{value}</Text>
+      </View>
     </View>
   );
 }
@@ -384,6 +404,14 @@ const styles = StyleSheet.create({
     color: cupidTheme.colors.textPrimary,
     fontSize: 14,
     fontWeight: '700',
+  },
+  detailValueWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  detailIcon: {
+    marginRight: 2,
   },
   bioBlock: {
     gap: 6,
