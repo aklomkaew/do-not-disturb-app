@@ -8,8 +8,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useHealthCheck } from '@/hooks/useHealthCheck';
-import { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { useState, useRef, useEffect } from 'react';
+import { ActivityIndicator, InteractionManager, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { NestableScrollContainer } from 'react-native-draggable-flatlist';
+import { DraggablePhotoRow } from '@/components/DraggablePhotoRow';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImage } from '@/utils/uploadImage';
 import { PhotoEntry, mergePhotoEntries, partitionSupportedAssets } from '@/utils/photoHelpers';
@@ -38,7 +40,20 @@ export function CreateProfileScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [photos, setPhotos] = useState<PhotoEntry[]>([]);
+  const originalPhotoOrderRef = useRef<string[] | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [optimizeOrderLoading, setOptimizeOrderLoading] = useState(false);
+
+  useEffect(() => {
+    if (photos.length === 0) {
+      originalPhotoOrderRef.current = null;
+    } else if (originalPhotoOrderRef.current === null) {
+      originalPhotoOrderRef.current = photos.map((p) => p.path);
+    }
+  }, [photos]);
+  const [bioSuggestions, setBioSuggestions] = useState<string[] | null>(null);
+  const [bioBeforeSuggestions, setBioBeforeSuggestions] = useState<string | null>(null);
+  const [bioLoading, setBioLoading] = useState(false);
 
   const pickPhotos = async () => {
     setError(null);
@@ -89,6 +104,71 @@ export function CreateProfileScreen() {
 
   const handleRemovePhoto = (path: string) => {
     setPhotos((prev) => prev.filter((photo) => photo.path !== path));
+  };
+
+  const handleImproveBio = async () => {
+    if (!bio.trim() || bioLoading) return;
+    try {
+      setBioLoading(true);
+      setBioSuggestions(null);
+      setBioBeforeSuggestions(bio.trim());
+      setError(null);
+      const token = await getAccessToken();
+      const res = await fetch(`${API_BASE_URL}/api/ai/rewrite-bio`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ bio: bio.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to get suggestions');
+      setBioSuggestions(data.suggestions || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not improve bio');
+    } finally {
+      setBioLoading(false);
+    }
+  };
+
+  const handleOptimizePhotoOrder = async () => {
+    if (photos.length < 2 || submitting || uploading) return;
+    try {
+      setOptimizeOrderLoading(true);
+      setError(null);
+      const token = await getAccessToken();
+      const res = await fetch(`${API_BASE_URL}/api/ai/suggest-photo-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ photoPaths: photos.map((p) => p.path) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to get order');
+      const ordered = data.orderedPaths as string[];
+      if (Array.isArray(ordered) && ordered.length === photos.length) {
+        const reordered = ordered
+          .map((path) => photos.find((p) => p.path === path))
+          .filter((p): p is PhotoEntry => !!p);
+        if (reordered.length === photos.length) {
+          setPhotos(reordered);
+          await new Promise<void>((resolve) => {
+            InteractionManager.runAfterInteractions(() => {
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => setTimeout(resolve, 150));
+              });
+            });
+          });
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not optimize photo order');
+    } finally {
+      setOptimizeOrderLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -178,7 +258,7 @@ export function CreateProfileScreen() {
 
   return (
     <ScreenContainer scrollable={false}>
-      <ScrollView 
+      <NestableScrollContainer
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="none"
@@ -197,6 +277,43 @@ export function CreateProfileScreen() {
               <Text style={styles.photoCount}>{photos.length}/5</Text>
             )}
           </View>
+          {photos.length >= 2 && (
+            <View style={styles.photoOrderActions}>
+              <Pressable
+                style={[styles.aiButton, (submitting || uploading || optimizeOrderLoading) && styles.aiButtonDisabled]}
+                onPress={handleOptimizePhotoOrder}
+                disabled={submitting || uploading || optimizeOrderLoading}
+              >
+                {optimizeOrderLoading ? (
+                  <ActivityIndicator size="small" color={cupidTheme.colors.accent} />
+                ) : (
+                  <Text style={styles.aiButtonLabel}>✨ Optimize order</Text>
+                )}
+              </Pressable>
+              {originalPhotoOrderRef.current != null &&
+                photos.map((p) => p.path).join(',') !== originalPhotoOrderRef.current.join(',') && (
+                  <Pressable
+                    style={[styles.revertButton, (submitting || uploading) && styles.aiButtonDisabled]}
+                    onPress={() => {
+                      const original = originalPhotoOrderRef.current ?? [];
+                      const photoMap = new Map(photos.map((p) => [p.path, p]));
+                      const reordered: PhotoEntry[] = [];
+                      for (const path of original) {
+                        const entry = photoMap.get(path);
+                        if (entry) reordered.push(entry);
+                      }
+                      for (const p of photos) {
+                        if (!original.includes(p.path)) reordered.push(p);
+                      }
+                      setPhotos([...reordered]);
+                    }}
+                    disabled={submitting || uploading}
+                  >
+                    <Text style={styles.revertButtonLabel}>↩ Revert to original</Text>
+                  </Pressable>
+                )}
+            </View>
+          )}
           <Text style={styles.helper}>
             {uploading 
               ? 'Uploading photos...' 
@@ -204,50 +321,14 @@ export function CreateProfileScreen() {
               ? 'Add at least one photo to get started. Your first photo will be your profile picture.'
               : 'Your first photo is your profile picture. Add up to 5 photos total (3 recommended for best results).'}
           </Text>
-          <View style={styles.photoRow}>
-            {photos.map((photo, idx) => {
-              // Ensure we have a valid URL - use url if available, otherwise try path as URL, fallback to empty
-              const photoUri = photo.url || (photo.path.startsWith('http') ? photo.path : null);
-              return (
-                <View key={photo.path} style={styles.photoItem}>
-                  {photoUri ? (
-                    <Image 
-                      source={{ uri: photoUri }} 
-                      style={styles.photo}
-                      resizeMode="cover"
-                      fadeDuration={150}
-                    />
-                  ) : (
-                    <View style={[styles.photo, styles.photoPlaceholder]}>
-                      <Text style={styles.photoPlaceholderText}>Loading...</Text>
-                    </View>
-                  )}
-                  <Pressable 
-                    style={styles.photoRemove} 
-                    onPress={() => handleRemovePhoto(photo.path)} 
-                    accessibilityLabel="Remove photo"
-                    accessibilityHint="Removes this photo from your profile"
-                  >
-                    <Text style={styles.photoRemoveLabel}>×</Text>
-                  </Pressable>
-                  <View style={styles.photoBadge}>
-                    <Text style={styles.photoBadgeText}>{idx === 0 ? 'Profile' : `${idx + 1}`}</Text>
-                  </View>
-                </View>
-              );
-            })}
-            {photos.length < 5 ? (
-              <Pressable 
-                style={[styles.photoAdd, submitting && styles.photoAddDisabled]} 
-                onPress={pickPhotos} 
-                disabled={submitting || uploading}
-                accessibilityLabel="Add photo"
-                accessibilityHint="Add a new photo to your profile"
-              >
-                <Text style={styles.photoAddLabel}>+ Add</Text>
-              </Pressable>
-            ) : null}
-          </View>
+          <DraggablePhotoRow
+            photos={photos}
+            onReorder={setPhotos}
+            onRemove={handleRemovePhoto}
+            onAdd={pickPhotos}
+            disabled={submitting || uploading}
+            canAdd={photos.length < 5}
+          />
           {photos.length === 0 && (
             <Text style={styles.photoWarning}>At least one photo is required to create your profile.</Text>
           )}
@@ -347,11 +428,24 @@ export function CreateProfileScreen() {
               <Text style={styles.charCount}>{bio.trim().length}/500</Text>
             )}
           </View>
+          <Pressable
+            style={[styles.aiButton, (bio.length < 10 || bioLoading || submitting) && styles.aiButtonDisabled]}
+            onPress={handleImproveBio}
+            disabled={bio.length < 10 || bioLoading || submitting}
+          >
+            {bioLoading ? (
+              <ActivityIndicator size="small" color={cupidTheme.colors.accent} />
+            ) : (
+              <Text style={styles.aiButtonLabel}>✨ Improve with AI</Text>
+            )}
+          </Pressable>
           <TextInput
             style={[styles.input, styles.textArea, bio.trim().length > 0 && bio.trim().length < 20 && styles.inputError]}
             value={bio}
             onChangeText={(text) => {
               setBio(text);
+              setBioSuggestions(null);
+              setBioBeforeSuggestions(null);
               if (error && error.includes('bio')) setError(null);
             }}
             placeholder="Share your interests, what you're looking for, or what makes you special. Be authentic!"
@@ -363,6 +457,42 @@ export function CreateProfileScreen() {
           />
           {bio.trim().length > 0 && bio.trim().length < 20 && (
             <Text style={styles.fieldError}>Please write at least 20 characters to help others get to know you</Text>
+          )}
+          {bioSuggestions && bioSuggestions.length > 0 && (
+            <View style={styles.suggestionsBox}>
+              <Text style={styles.suggestionsTitle}>AI suggestions</Text>
+              {bioSuggestions.map((s: string, i: number) => (
+                <Pressable
+                  key={i}
+                  style={styles.suggestionItem}
+                  onPress={() => { setBio(s); setBioSuggestions(null); }}
+                >
+                  <Text style={styles.suggestionText} numberOfLines={4}>{s}</Text>
+                  <Text style={styles.suggestionUse}>Use this →</Text>
+                </Pressable>
+              ))}
+              <View style={styles.suggestionActions}>
+                {bioBeforeSuggestions != null && (
+                  <Pressable
+                    style={styles.revertButton}
+                    onPress={() => { setBio(bioBeforeSuggestions); setBioSuggestions(null); setBioBeforeSuggestions(null); }}
+                  >
+                    <Text style={styles.revertButtonLabel}>↩ Revert to original</Text>
+                  </Pressable>
+                )}
+                <Pressable style={styles.suggestionDismiss} onPress={() => { setBioSuggestions(null); }}>
+                  <Text style={styles.suggestionDismissLabel}>Dismiss</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+          {bioBeforeSuggestions != null && bio !== bioBeforeSuggestions && !bioSuggestions?.length && (
+            <Pressable
+              style={styles.revertButtonStandalone}
+              onPress={() => { setBio(bioBeforeSuggestions); setBioBeforeSuggestions(null); }}
+            >
+              <Text style={styles.revertButtonLabel}>↩ Revert to original</Text>
+            </Pressable>
           )}
 
           <FunQuestions 
@@ -393,7 +523,7 @@ export function CreateProfileScreen() {
             )}
           </Pressable>
         </View>
-      </ScrollView>
+      </NestableScrollContainer>
     </ScreenContainer>
   );
 }
@@ -717,6 +847,98 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 16,
     letterSpacing: 0.4,
+  },
+  aiButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.accentSoft,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.accent,
+  },
+  aiButtonDisabled: {
+    opacity: 0.5,
+  },
+  aiButtonLabel: {
+    color: cupidTheme.colors.accent,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  suggestionsBox: {
+    marginTop: 8,
+    padding: 14,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.border,
+    gap: 10,
+  },
+  suggestionsTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: cupidTheme.colors.textPrimary,
+  },
+  suggestionItem: {
+    padding: 12,
+    borderRadius: cupidTheme.radii.md,
+    backgroundColor: cupidTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.borderSubtle,
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: cupidTheme.colors.textPrimary,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  suggestionUse: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: cupidTheme.colors.accent,
+  },
+  suggestionActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 4,
+  },
+  photoOrderActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  revertButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: cupidTheme.radii.md,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.border,
+  },
+  revertButtonStandalone: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: cupidTheme.radii.md,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: cupidTheme.colors.border,
+  },
+  revertButtonLabel: {
+    color: cupidTheme.colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  suggestionDismiss: {
+    paddingVertical: 6,
+  },
+  suggestionDismissLabel: {
+    color: cupidTheme.colors.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
 

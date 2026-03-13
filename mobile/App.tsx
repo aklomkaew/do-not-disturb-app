@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import { AuthenticatedNavigator, navigationTheme } from '@/navigation/AuthenticatedNavigator';
 import { LoginScreen } from '@/screens/LoginScreen';
 import { AuthProvider } from '@/providers/AuthProvider';
@@ -6,6 +7,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useFonts } from 'expo-font';
 import { ActivityIndicator, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { cupidTheme } from '@/constants/theme';
 
@@ -15,11 +17,13 @@ export default function App() {
   const [fontsLoaded] = useFonts({});
 
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <AppShell fontsLoaded={fontsLoaded} />
-      </AuthProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <AppShell fontsLoaded={fontsLoaded} />
+        </AuthProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
