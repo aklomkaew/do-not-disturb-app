@@ -1,9 +1,10 @@
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { ProfileCard, ProfileCardData } from '@/components/ProfileCard';
+import { PhotoCarousel } from '@/components/PhotoCarousel';
 import { API_BASE_URL } from '@/constants/config';
 import { useAuth } from '@/hooks/useAuth';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -49,7 +50,55 @@ export function MatchesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<MatchItem | null>(null);
+  const [compatibilityLoading, setCompatibilityLoading] = useState(false);
+  const [compatibilityResult, setCompatibilityResult] = useState<{ score: number; explanation: string } | null>(null);
+  const [compatibilityError, setCompatibilityError] = useState<string | null>(null);
   const modalWidth = Dimensions.get('window').width - 48;
+
+  const fetchCompatibility = useCallback(
+    async (partnerProfileId: string) => {
+      setCompatibilityLoading(true);
+      setCompatibilityError(null);
+      setCompatibilityResult(null);
+      try {
+        const token = await getAccessToken();
+        const response = await fetch(`${API_BASE_URL}/api/ai/compatibility`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ partnerProfileId }),
+        });
+        if (!response.ok) {
+          const msg = await response.json().catch(() => ({ message: 'Request failed' }));
+          throw new Error(msg?.message ?? 'Failed to assess compatibility');
+        }
+        const data = await response.json();
+        setCompatibilityResult({ score: data.score, explanation: data.explanation });
+      } catch (err) {
+        setCompatibilityError(err instanceof Error ? err.message : 'Failed to assess compatibility');
+      } finally {
+        setCompatibilityLoading(false);
+      }
+    },
+    [getAccessToken]
+  );
+
+  const clearCompatibility = useCallback(() => {
+    setCompatibilityResult(null);
+    setCompatibilityError(null);
+    setCompatibilityLoading(false);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setSelectedMatch(null);
+    clearCompatibility();
+  }, [clearCompatibility]);
+
+  useEffect(() => {
+    clearCompatibility();
+  }, [selectedMatch?.partner?.id, clearCompatibility]);
 
   const fetchMatches = useCallback(
     async (isRefresh = false) => {
@@ -128,7 +177,7 @@ export function MatchesScreen() {
                   <Image 
                     source={{ uri: item.partner.photos[0] }} 
                     style={styles.photo}
-                    resizeMode="cover"
+                    resizeMode="contain"
                     fadeDuration={150}
                   />
                 </View>
@@ -171,29 +220,70 @@ export function MatchesScreen() {
         }
       />
       {selectedMatch ? (
-        <Modal animationType="slide" transparent visible onRequestClose={() => setSelectedMatch(null)}>
+        <Modal animationType="slide" transparent visible onRequestClose={handleCloseModal}>
           <View style={styles.modalBackdrop}>
-            <View style={[styles.modalCard, { width: modalWidth }]}>
-              <ProfileCard
-                profile={{
-                  id: selectedMatch.partner.id,
-                  displayName: selectedMatch.partner.displayName,
-                  age: selectedMatch.partner.age,
-                  gender: selectedMatch.partner.gender,
-                  relationshipStatus: selectedMatch.partner.relationshipStatus,
-                  location: selectedMatch.partner.location,
-                  bio: selectedMatch.partner.bio,
-                  instagramHandle: selectedMatch.partner.instagramHandle,
-                  preferences: selectedMatch.partner.preferences,
-                  photos: selectedMatch.partner.photos,
-                } as ProfileCardData}
-                variant="detailed"
-                showActions={false}
-              />
-              <Pressable style={styles.closeButton} onPress={() => setSelectedMatch(null)}>
-                <Text style={styles.closeLabel}>Close</Text>
-              </Pressable>
-            </View>
+            <ScrollView
+              contentContainerStyle={[styles.modalScrollContent, { width: modalWidth }]}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={[styles.modalCard, { width: modalWidth }]}>
+                {/* Photo and profile in one card - no break */}
+                {selectedMatch.partner.photos && selectedMatch.partner.photos.length > 0 ? (
+                  <PhotoCarousel
+                    photos={selectedMatch.partner.photos}
+                    width={modalWidth - 32}
+                    height={400}
+                  />
+                ) : null}
+                <ProfileCard
+                  profile={{
+                      id: selectedMatch.partner.id,
+                      displayName: selectedMatch.partner.displayName,
+                      age: selectedMatch.partner.age,
+                      gender: selectedMatch.partner.gender,
+                      relationshipStatus: selectedMatch.partner.relationshipStatus,
+                      location: selectedMatch.partner.location,
+                      bio: selectedMatch.partner.bio,
+                      instagramHandle: selectedMatch.partner.instagramHandle,
+                      preferences: selectedMatch.partner.preferences,
+                      photos: selectedMatch.partner.photos,
+                  } as ProfileCardData}
+                  variant="detailed"
+                  showActions={false}
+                  hidePhoto
+                />
+                {compatibilityResult ? (
+                  <View style={styles.compatibilityBlock}>
+                    <View style={styles.compatibilityScoreRow}>
+                      <Ionicons name="heart" size={24} color={cupidTheme.colors.accent} />
+                      <Text style={styles.compatibilityScoreLabel}>AI Compatibility</Text>
+                      <Text style={styles.compatibilityScore}>{compatibilityResult.score}%</Text>
+                    </View>
+                    <Text style={styles.compatibilityExplanation}>{compatibilityResult.explanation}</Text>
+                  </View>
+                ) : compatibilityLoading ? (
+                  <View style={styles.compatibilityBlock}>
+                    <ActivityIndicator color={cupidTheme.colors.accent} />
+                    <Text style={styles.compatibilityLoadingText}>Assessing compatibility...</Text>
+                  </View>
+                ) : compatibilityError ? (
+                  <View style={styles.compatibilityBlock}>
+                    <Text style={styles.compatibilityErrorText}>{compatibilityError}</Text>
+                  </View>
+                ) : null}
+                <Pressable
+                  style={[styles.viewCompatButton, compatibilityLoading && styles.buttonDisabled]}
+                  onPress={() => fetchCompatibility(selectedMatch.partner.id)}
+                  disabled={compatibilityLoading}
+                >
+                  <Ionicons name="sparkles" size={18} color={cupidTheme.colors.surface} />
+                  <Text style={styles.viewCompatLabel}>View compatibility</Text>
+                </Pressable>
+                <Pressable style={styles.closeButton} onPress={handleCloseModal}>
+                  <Text style={styles.closeLabel}>Close</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
           </View>
         </Modal>
       ) : null}
@@ -342,12 +432,70 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
   },
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
   modalCard: {
     backgroundColor: cupidTheme.colors.surface,
     borderRadius: cupidTheme.radii.xl,
     padding: 16,
     ...cardShadow('floating'),
     gap: 12,
+  },
+  compatibilityBlock: {
+    padding: 14,
+    borderRadius: cupidTheme.radii.lg,
+    backgroundColor: cupidTheme.colors.surfaceMuted,
+    gap: 10,
+    alignItems: 'center',
+  },
+  compatibilityScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  compatibilityScoreLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: cupidTheme.colors.textPrimary,
+  },
+  compatibilityScore: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: cupidTheme.colors.accent,
+  },
+  compatibilityExplanation: {
+    fontSize: 14,
+    color: cupidTheme.colors.textSecondary,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  compatibilityLoadingText: {
+    fontSize: 14,
+    color: cupidTheme.colors.textMuted,
+  },
+  compatibilityErrorText: {
+    fontSize: 14,
+    color: cupidTheme.colors.error,
+  },
+  viewCompatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: cupidTheme.colors.accent,
+    paddingVertical: 12,
+    borderRadius: cupidTheme.radii.lg,
+  },
+  viewCompatLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: cupidTheme.colors.surface,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   closeButton: {
     borderRadius: cupidTheme.radii.lg,

@@ -26,6 +26,7 @@ type ProfileCardProps = {
   profile: ProfileCardData;
   variant?: 'default' | 'compact' | 'detailed';
   showActions?: boolean;
+  hidePhoto?: boolean;
   onPress?: () => void;
   onLike?: () => void;
   onPass?: () => void;
@@ -39,6 +40,7 @@ export function ProfileCard({
   profile,
   variant = 'default',
   showActions = false,
+  hidePhoto = false,
   onPress,
   onLike,
   onPass,
@@ -57,7 +59,7 @@ export function ProfileCard({
   const cardContent = (
     <View style={[styles.card, isCompact && styles.cardCompact, isDetailed && styles.cardDetailed]}>
       {/* Photo Section */}
-      {hasPhotos ? (
+      {!hidePhoto && (hasPhotos ? (
         <View style={styles.photoWrapper}>
           <PhotoCarousel 
             photos={photos} 
@@ -69,7 +71,7 @@ export function ProfileCard({
           <Ionicons name="image-outline" size={48} color={cupidTheme.colors.border} />
           <Text style={styles.photoFallbackText}>No photos yet</Text>
         </View>
-      )}
+      ))}
 
       {/* Profile Info Section */}
       <View style={[styles.content, isCompact && styles.contentCompact]}>
