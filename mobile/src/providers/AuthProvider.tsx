@@ -61,6 +61,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshToken: null,
   });
 
+  const refreshWithToken = useCallback(async (refreshToken: string) => {
+    const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!response.ok) {
+      const message = await extractError(response);
+      if (response.status === 401) {
+        await deleteSessionItem(SESSION_KEY).catch(() => {});
+      }
+      throw new Error(message);
+    }
+
+    const data = await response.json();
+    await setSessionItem(SESSION_KEY, JSON.stringify({ refreshToken: data.refreshToken }));
+
+    setState({
+      status: 'authenticated',
+      user: data.user,
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
+    });
+    return data.accessToken as string;
+  }, []);
+
   const bootstrapSession = useCallback(async () => {
     try {
       const stored = await getSessionItem(SESSION_KEY);
@@ -78,36 +105,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await refreshWithToken(parsed.refreshToken);
     } catch (error) {
       console.warn('Failed to restore session', error);
+      await deleteSessionItem(SESSION_KEY).catch(() => {});
       setState((prev) => ({ ...prev, status: 'unauthenticated', user: null, accessToken: null, refreshToken: null }));
     }
-  }, []);
+  }, [refreshWithToken]);
 
   useEffect(() => {
     bootstrapSession();
   }, [bootstrapSession]);
-
-  const refreshWithToken = useCallback(async (refreshToken: string) => {
-    const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
-
-    if (!response.ok) {
-      throw new Error(await extractError(response));
-    }
-
-    const data = await response.json();
-    await setSessionItem(SESSION_KEY, JSON.stringify({ refreshToken: data.refreshToken }));
-
-    setState({
-      status: 'authenticated',
-      user: data.user,
-      accessToken: data.accessToken,
-      refreshToken: data.refreshToken,
-    });
-    return data.accessToken as string;
-  }, []);
 
   const requestLoginCode = useCallback(async (payload: RequestCodePayload) => {
     const response = await fetch(`${API_BASE_URL}/api/auth/request-code`, {

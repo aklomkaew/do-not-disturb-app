@@ -3,6 +3,9 @@
 Documentation lives under `docs/`:
 - `docs/public-api.md`
 - `docs/do-not-disturb-prd.md`
+- `docs/deployment-guide.md` — Step-by-step deployment for production (500+ users)
+- `docs/render-deploy.md` — Deploy API to Render (free, for testing)
+- `docs/twilio-sms-setup.md` — **Send real SMS verification codes on sign-up**
 
 ## Backend (Phase 1 scaffold)
 Located in `server/` and built with **Express + TypeScript + Prisma**.

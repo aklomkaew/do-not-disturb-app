@@ -19,15 +19,22 @@ export async function sendVerificationSms(to: string, code: string) {
   const message = `Your Do Not Disturb verification code is ${code}`;
 
   if (!twilioClient || !env.TWILIO_FROM_NUMBER) {
-    console.info(`[auth:sms:mock] -> ${to} :: ${message}`);
+    // eslint-disable-next-line no-console
+    console.warn(`[auth:sms] MOCK MODE – no SMS sent to ${to}. Code: ${code}. Set SMS_PROVIDER=twilio and add TWILIO_* credentials for real SMS.`);
     return;
   }
 
-  await twilioClient.messages.create({
-    body: message,
-    from: env.TWILIO_FROM_NUMBER,
-    to,
-  });
+  try {
+    await twilioClient.messages.create({
+      body: message,
+      from: env.TWILIO_FROM_NUMBER,
+      to,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[auth:sms] Twilio error:', err instanceof Error ? err.message : err);
+    throw err;
+  }
 }
 
 export async function sendVerificationEmail(to: string, code: string) {

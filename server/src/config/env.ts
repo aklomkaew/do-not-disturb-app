@@ -1,7 +1,8 @@
 import { config } from 'dotenv';
+import path from 'path';
 import { z } from 'zod';
 
-config();
+config({ path: path.resolve(__dirname, '../../.env') });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -25,6 +26,7 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   SUPABASE_BUCKET: z.string().min(1),
   GEMINI_API_KEY: z.string().min(1).optional(),
+  CORS_ORIGIN: z.string().optional(), // e.g. "https://app.example.com" or "https://app.example.com,https://web.example.com"
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
