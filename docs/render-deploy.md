@@ -23,7 +23,7 @@ Use Render's free tier for testing. You can switch to Railway later for producti
 | **Region** | Choose closest to your users |
 | **Root Directory** | `server` |
 | **Runtime** | Node |
-| **Build Command** | `npm install && npm run prisma:generate && npm run build` |
+| **Build Command** | `npm install --include=dev && npm run prisma:generate && npm run build` |
 | **Start Command** | `npx prisma migrate deploy && node dist/server.js` |
 
 ---
@@ -85,7 +85,39 @@ For production builds (EAS), set `EXPO_PUBLIC_API_BASE_URL` as an EAS secret to 
 
 ---
 
-## Troubleshooting: "No open ports detected"
+## Troubleshooting
+
+### "Could not find a declaration file for module 'express'"
+
+Render runs `npm install` with `NODE_ENV=production`, so devDependencies (including `@types/express`) are skipped. Update your Build Command to:
+
+```text
+npm install --include=dev && npm run prisma:generate && npm run build
+```
+
+Then trigger a new deploy.
+
+---
+
+### Timeout during deploy
+
+If the deploy times out (build or health check):
+
+1. **Build timeout** — Free tier has limited build minutes. The server no longer includes `expo`/`react-native-web`, which speeds up `npm install`. If it still times out, try splitting the build:
+   - Build: `npm install --include=dev && npm run prisma:generate && npm run build`
+   - Consider upgrading to a paid plan for faster builds.
+
+2. **Start/health check timeout** — Render waits for your app to respond. Ensure:
+   - Start command: `npx prisma migrate deploy && node dist/server.js`
+   - The server binds to `0.0.0.0` and listens on `PORT` (set by Render).
+   - `/` and `/health` return quickly. If `prisma migrate deploy` is slow (e.g. Neon cold start), the first deploy can take 1–2 minutes.
+   - In Render: **Settings → Health Check Path** — set to `/health` if you use a custom check.
+
+3. **Neon cold start** — `prisma migrate deploy` connects to Neon. Use the **pooled** connection string (`-pooler` in the URL) to avoid cold-start delays.
+
+---
+
+### "No open ports detected"
 
 1. **Do not set `PORT`** — Render sets it automatically. Remove `PORT` from your Render env vars if you added it.
 2. **Check the Logs** — The service may be crashing before it starts. Common causes:
